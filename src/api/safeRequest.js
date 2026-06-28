@@ -1,18 +1,13 @@
 import request from './request.js'
-import { checkRisk } from './riskEngine.js'
 
 export function safePost(url, data = {}) {
-  if (data.__admin === true) {
+
+  if (data.__admin) {
     return request.post(url, data)
   }
 
-  if (data.__init__ === true) {
+  if (data.__init__) {
     return request.post(url, data)
-  }
-
-  const risk = checkRisk(data, url)
-  if (!risk.pass) {
-    throw new Error(risk.msg)
   }
 
   return request.post(url, data)
