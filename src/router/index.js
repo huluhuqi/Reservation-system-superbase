@@ -8,6 +8,14 @@ const router = createRouter({
       redirect: '/home/booking'
     },
     {
+      path: '/admin',
+      redirect: '/admin/dashboard'
+    },
+    {
+      path: '/home',
+      redirect: '/home/booking'
+    },
+    {
       path: '/login',
       component: () => import('../views/Login.vue')
     },

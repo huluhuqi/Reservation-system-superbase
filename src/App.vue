@@ -1,5 +1,7 @@
 <template>
-  <component :is="layout" />
+  <div v-if="ready">
+    <component :is="layout" />
+  </div>
 </template>
 
 <script>
@@ -8,6 +10,11 @@ import AdminLayout from './layout/AdminLayout.vue'
 import Login from './views/Login.vue'
 
 export default {
+  data() {
+    return {
+      ready: false
+    }
+  },
   computed: {
     layout() {
       const path = this.$route.path
@@ -22,6 +29,11 @@ export default {
 
       return UserLayout
     }
+  },
+  mounted() {
+    setTimeout(() => {
+      this.ready = true
+    }, 50)
   }
 }
 </script>

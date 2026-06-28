@@ -11,7 +11,11 @@ export function getUser() {
 
 export function setUser(user) {
   if (user) {
-    localStorage.setItem(USER_KEY, JSON.stringify(user))
+    const safeUser = { ...user }
+    if (!safeUser.role) {
+      safeUser.role = 'user'
+    }
+    localStorage.setItem(USER_KEY, JSON.stringify(safeUser))
   } else {
     localStorage.removeItem(USER_KEY)
   }
@@ -28,7 +32,7 @@ export function getUserId() {
 
 export function getUserRole() {
   const user = getUser()
-  return user.role || user.user_role || ''
+  return user.role || user.user_role || 'user'
 }
 
 export function getUserName() {

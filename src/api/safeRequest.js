@@ -32,18 +32,50 @@ export function safePost(url, data = {}, options = {}) {
 
   detectLegacyFields(data)
 
-  if (data.__admin === true || data.__init__ || skipRisk) {
+  const isAdmin = data.__admin === true
+  const isInit = data.__init__ === true
+  const bypassRisk = isAdmin || isInit || skipRisk
+
+  let requestPromise
+
+  if (bypassRisk) {
     const safeData = adaptRequest(data)
-    return request.post(url, safeData)
+    requestPromise = request.post(url, safeData, {
+      headers: {
+        'X-Bypass-Throttle': isAdmin || isInit ? 'true' : 'false'
+      }
+    })
+  } else {
+    const risk = checkRisk(data)
+    if (!risk.pass) {
+      return Promise.reject({
+        type: 'RISK_ERROR',
+        message: risk.msg
+      })
+    }
+
+    const safeData = adaptRequest(data)
+    requestPromise = request.post(url, safeData)
   }
 
-  const risk = checkRisk(data)
-  if (!risk.pass) {
-    throw new Error(risk.msg)
-  }
+  return requestPromise.catch(error => {
+    if (error.type) {
+      return Promise.reject(error)
+    }
 
-  const safeData = adaptRequest(data)
-  return request.post(url, safeData)
+    if (error.message === '请求过于频繁，请稍后再试') {
+      return Promise.reject({
+        type: 'THROTTLE_ERROR',
+        message: error.message
+      })
+    }
+
+    return Promise.reject({
+      type: 'UNKNOWN_ERROR',
+      message: error.message || '操作失败',
+      original: error
+    })
+  })
 }
 
 export function safeGet(url, params, options = {}) {

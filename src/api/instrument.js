@@ -82,10 +82,11 @@ export const instrumentApi = {
       user_id: getUserId(),
       role: getUserRole(),
       model_name: TABLE,
-      data: JSON.stringify(createData)
+      data: JSON.stringify(createData),
+      __admin: true
     }
 
-    const res = await safePost('/', payload, { skipRisk: true })
+    const res = await safePost('/', payload)
     const newId = res.id
 
     if (newId) {
