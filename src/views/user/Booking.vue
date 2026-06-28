@@ -339,7 +339,9 @@ async function handleReserveSelectedSlots() {
   } catch (e) {
     errorMessage.value = e.message || '预约失败'
   } finally {
-    operating.value = false
+    setTimeout(() => {
+      operating.value = false
+    }, 1200)
   }
 }
 
@@ -375,7 +377,9 @@ async function handleCancelSelectedSlots() {
   } catch (e) {
     errorMessage.value = e.message || '取消预约失败'
   } finally {
-    operating.value = false
+    setTimeout(() => {
+      operating.value = false
+    }, 1200)
   }
 }
 

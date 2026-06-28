@@ -75,7 +75,9 @@ async function deleteBooking(record) {
   } catch (e) {
     errorMessage.value = e.message || '删除失败'
   } finally {
-    operating.value = false
+    setTimeout(() => {
+      operating.value = false
+    }, 1200)
   }
 }
 

@@ -57,7 +57,9 @@ async function addUser() {
   } catch (e) {
     errorMessage.value = e.message || '添加失败'
   } finally {
-    operating.value = false
+    setTimeout(() => {
+      operating.value = false
+    }, 1200)
   }
 }
 
@@ -88,7 +90,9 @@ async function batchDeleteUsers() {
   } catch (e) {
     errorMessage.value = e.message || '删除失败'
   } finally {
-    operating.value = false
+    setTimeout(() => {
+      operating.value = false
+    }, 1200)
   }
 }
 
@@ -106,7 +110,9 @@ async function deleteSingleUser(user) {
   } catch (e) {
     errorMessage.value = e.message || '删除失败'
   } finally {
-    operating.value = false
+    setTimeout(() => {
+      operating.value = false
+    }, 1200)
   }
 }
 

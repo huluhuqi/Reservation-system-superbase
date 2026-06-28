@@ -97,7 +97,9 @@ async function saveSlots() {
   } catch (e) {
     errorMessage.value = e.message || '保存失败'
   } finally {
-    operating.value = false
+    setTimeout(() => {
+      operating.value = false
+    }, 1200)
   }
 }
 

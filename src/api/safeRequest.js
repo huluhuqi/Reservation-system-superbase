@@ -27,12 +27,12 @@ function detectLegacyFields(data, path = '') {
   }
 }
 
-export function safePost(url, data, options = {}) {
+export function safePost(url, data = {}, options = {}) {
   const { skipRisk = false } = options
 
   detectLegacyFields(data)
 
-  if (!skipRisk) {
+  if (!skipRisk && !data.__init__) {
     const risk = checkRisk(data)
     if (!risk.pass) {
       throw new Error(risk.msg)

@@ -250,6 +250,8 @@ export function riskGuard(user) {
 // =========================
 // 🚀 checkRisk 简化版（统一入口）
 // =========================
+const MIN_REQUEST_INTERVAL = 800
+
 export function checkRisk(data) {
   const user_id = data.user_id
 
@@ -257,14 +259,19 @@ export function checkRisk(data) {
     return { pass: false, msg: '未登录' }
   }
 
-  const key = `risk_${user_id}`
-  const count = Number(localStorage.getItem(key) || 0)
-
-  if (count >= 5) {
-    return { pass: false, msg: '操作过于频繁' }
+  if (data.__init__ === true) {
+    return { pass: true }
   }
 
-  localStorage.setItem(key, count + 1)
+  const key = `risk_${user_id}`
+  const lastTime = Number(localStorage.getItem(key) || 0)
+  const now = Date.now()
+
+  if (now - lastTime < MIN_REQUEST_INTERVAL) {
+    return { pass: false, msg: '请求过于频繁，请稍后再试' }
+  }
+
+  localStorage.setItem(key, String(now))
 
   return { pass: true }
 }

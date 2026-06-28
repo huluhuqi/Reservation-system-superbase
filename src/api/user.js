@@ -26,7 +26,7 @@ function denormalizeData(data) {
 }
 
 export const userApi = {
-  async getSettings() {
+  async getSettings(options = {}) {
     const payload = {
       s: 'App.Table.FreeFindOne',
       app_key: APP_KEY,

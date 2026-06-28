@@ -46,7 +46,9 @@ async function addCategory() {
   } catch (e) {
     errorMessage.value = e.message || '新增失败'
   } finally {
-    operating.value = false
+    setTimeout(() => {
+      operating.value = false
+    }, 1200)
   }
 }
 
@@ -66,7 +68,9 @@ async function deleteCategory(item) {
   } catch (e) {
     errorMessage.value = e.message || '删除失败'
   } finally {
-    operating.value = false
+    setTimeout(() => {
+      operating.value = false
+    }, 1200)
   }
 }
 

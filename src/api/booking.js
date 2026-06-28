@@ -116,7 +116,7 @@ export const bookingApi = {
         data: JSON.stringify(createData)
       }
 
-      const res = await safePost('/', payload, { skipRisk: true })
+      const res = await safePost('/', payload)
       const newId = res.id
 
       let result
@@ -167,7 +167,7 @@ export const bookingApi = {
       id
     }
 
-    await safePost('/', payload, { skipRisk: true })
+    await safePost('/', payload)
     return { success: true }
   },
 

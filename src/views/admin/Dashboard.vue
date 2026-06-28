@@ -19,10 +19,10 @@ const recentBookings = ref([])
 async function loadStats() {
   try {
     const [settings, categories, instruments, todayBookings] = await Promise.all([
-      userApi.getSettings(),
-      categoryApi.getCategories(),
-      instrumentApi.getInstruments(),
-      bookingApi.getBookingsByDate(getTodayDate())
+      userApi.getSettings({ __init__: true }),
+      categoryApi.getCategories({ __init__: true }),
+      instrumentApi.getInstruments({ __init__: true }),
+      bookingApi.getBookingsByDate(getTodayDate(), null, null, { __init__: true })
     ])
 
     stats.value = {

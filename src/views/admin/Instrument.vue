@@ -71,7 +71,9 @@ async function addInstrument() {
   } catch (e) {
     error_message.value = e.message || '新增失败'
   } finally {
-    operating.value = false
+    setTimeout(() => {
+      operating.value = false
+    }, 1200)
   }
 }
 
@@ -89,7 +91,9 @@ async function deleteInstrument(item) {
   } catch (e) {
     error_message.value = e.message || '删除失败'
   } finally {
-    operating.value = false
+    setTimeout(() => {
+      operating.value = false
+    }, 1200)
   }
 }
 
