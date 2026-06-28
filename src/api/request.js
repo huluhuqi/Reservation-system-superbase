@@ -1,67 +1,71 @@
 import axios from 'axios'
 import { adaptRequest } from '../utils/fieldAdapter.js'
-import { securityGateway } from './security.js'
+import { createSign } from './security.js'
 
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://api.yesapi.net'
-
-const request = axios.create({
-  baseURL: BASE_URL,
+const service = axios.create({
+  baseURL: import.meta.env.VITE_API_BASE || 'http://api.yesapi.net',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/x-www-form-urlencoded'
   }
 })
 
-request.interceptors.request.use(config => {
+service.interceptors.request.use(config => {
   if (config.method === 'post' && config.data && typeof config.data === 'object') {
     const converted = adaptRequest(config.data)
 
     const bypassThrottle = config.headers['X-Bypass-Throttle'] === 'true'
+    delete config.headers['X-Bypass-Throttle']
 
-    const secured = securityGateway(converted, {
-      enableThrottle: !bypassThrottle,
-      enableNonce: true,
-      enableSign: true,
-      strict: false
-    })
+    const timestamp = Date.now()
+    const nonce = Math.random().toString(36).substring(2, 15)
+
+    const signData = { ...converted, timestamp, nonce }
+    const sign = createSign(signData)
 
     const params = new URLSearchParams()
-    for (const key of Object.keys(secured)) {
-      params.append(key, secured[key])
+    for (const key of Object.keys(converted)) {
+      if (converted[key] !== undefined && converted[key] !== null) {
+        params.append(key, converted[key])
+      }
     }
+    params.append('timestamp', timestamp)
+    params.append('nonce', nonce)
+    params.append('sign', sign)
+
     config.data = params
   }
   return config
 })
 
-request.interceptors.response.use(
-  res => {
-    return res.data
-  },
-  error => {
-    if (error.message === 'Network Error' || !error.response) {
+service.interceptors.response.use(
+  res => res.data,
+  err => {
+    console.error('API Error:', err)
+
+    if (err.message === 'Network Error' || !err.response) {
       return Promise.reject({
         type: 'NETWORK_ERROR',
-        message: '网络连接失败，请检查网络或后端服务',
-        original: error
+        message: '网络连接失败，请检查后端服务',
+        original: err
       })
     }
 
-    if (error.response) {
+    if (err.response) {
       return Promise.reject({
         type: 'SERVER_ERROR',
-        message: error.response.data?.msg || error.response.statusText || '服务器错误',
-        status: error.response.status,
-        original: error
+        message: err.response.data?.msg || err.response.statusText || '服务器错误',
+        status: err.response.status,
+        original: err
       })
     }
 
     return Promise.reject({
       type: 'UNKNOWN_ERROR',
-      message: error.message || '未知错误',
-      original: error
+      message: err.message || '未知错误',
+      original: err
     })
   }
 )
 
-export default request
+export default service

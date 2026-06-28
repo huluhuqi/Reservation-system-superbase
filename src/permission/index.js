@@ -33,12 +33,5 @@ router.beforeEach((to, from, next) => {
     return next('/home/booking')
   }
 
-  if (to.path === '/' || to.path === '/home') {
-    if (role === 'admin' || role === 'super_admin') {
-      return next('/admin/dashboard')
-    }
-    return next('/home/booking')
-  }
-
   next()
 })

@@ -66,6 +66,10 @@ const router = createRouter({
     {
       path: '/admin/password',
       component: () => import('../views/admin/Password.vue')
+    },
+    {
+      path: '/:pathMatch(.*)*',
+      redirect: '/home/booking'
     }
   ]
 })
