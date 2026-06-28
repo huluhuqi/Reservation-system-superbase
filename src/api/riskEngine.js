@@ -250,7 +250,7 @@ export function riskGuard(user) {
 // =========================
 // 🚀 checkRisk 简化版（统一入口）
 // =========================
-const MIN_REQUEST_INTERVAL = 800
+const MIN_REQUEST_INTERVAL = 700
 
 export function checkRisk(data) {
   const user_id = data.user_id

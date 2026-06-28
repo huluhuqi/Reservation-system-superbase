@@ -32,15 +32,17 @@ export function safePost(url, data = {}, options = {}) {
 
   detectLegacyFields(data)
 
-  if (!skipRisk && !data.__init__) {
-    const risk = checkRisk(data)
-    if (!risk.pass) {
-      throw new Error(risk.msg)
-    }
+  if (data.__init__ || skipRisk) {
+    const safeData = adaptRequest(data)
+    return request.post(url, safeData)
+  }
+
+  const risk = checkRisk(data)
+  if (!risk.pass) {
+    throw new Error(risk.msg)
   }
 
   const safeData = adaptRequest(data)
-
   return request.post(url, safeData)
 }
 

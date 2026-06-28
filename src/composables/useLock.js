@@ -1,23 +1,23 @@
 import { ref } from 'vue'
 
 export function useLock(delay = 1000) {
-  const locked = ref(false)
+  const lock = ref(false)
 
   const run = async (fn) => {
-    if (locked.value) return
+    if (lock.value) return
 
-    locked.value = true
+    lock.value = true
     try {
       await fn()
     } finally {
       setTimeout(() => {
-        locked.value = false
+        lock.value = false
       }, delay)
     }
   }
 
   return {
-    locked,
+    lock,
     run
   }
 }

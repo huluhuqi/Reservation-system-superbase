@@ -1,14 +1,18 @@
 import router from '../router'
-import { isUserLoggedIn, isAdmin, getUserRole } from '../api/context.js'
+import { isUserLoggedIn, getUserRole } from '../api/context.js'
 
-const WHITE_LIST = ['/login']
+let initialized = false
 
 router.beforeEach((to, from, next) => {
-  const loggedIn = isUserLoggedIn()
+  const token = isUserLoggedIn()
   const role = getUserRole()
 
-  if (WHITE_LIST.includes(to.path)) {
-    if (loggedIn) {
+  if (!token && to.path !== '/login') {
+    return next('/login')
+  }
+
+  if (to.path === '/login') {
+    if (token) {
       if (role === 'admin' || role === 'super_admin') {
         return next('/admin/dashboard')
       }
@@ -17,20 +21,19 @@ router.beforeEach((to, from, next) => {
     return next()
   }
 
-  if (!loggedIn) {
-    return next('/login')
+  if (!initialized) {
+    initialized = true
+    if (to.path === '/' || to.path === '/home') {
+      if (role === 'admin' || role === 'super_admin') {
+        return next('/admin/dashboard')
+      }
+      return next('/home/booking')
+    }
   }
 
   if (to.path.startsWith('/admin')) {
     if (role === 'admin' || role === 'super_admin') {
       return next()
-    }
-    return next('/home/booking')
-  }
-
-  if (to.path === '/') {
-    if (role === 'admin' || role === 'super_admin') {
-      return next('/admin/dashboard')
     }
     return next('/home/booking')
   }
