@@ -19,7 +19,7 @@ export function safePost(url, data = {}) {
     })
   }
 
-  const risk = checkRisk(data)
+  const risk = checkRisk(data, url)
   if (!risk.pass) {
     return Promise.reject({
       type: 'RISK_ERROR',

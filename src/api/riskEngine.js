@@ -252,7 +252,7 @@ export function riskGuard(user) {
 // =========================
 const MIN_REQUEST_INTERVAL = 600
 
-export function checkRisk(data) {
+export function checkRisk(data, url = '') {
   const user_id = data.user_id
 
   if (!user_id) {
@@ -263,7 +263,7 @@ export function checkRisk(data) {
     return { pass: true }
   }
 
-  const key = `risk_${user_id}`
+  const key = `risk_${user_id}_${url}`
   const lastTime = Number(localStorage.getItem(key) || 0)
   const now = Date.now()
 
