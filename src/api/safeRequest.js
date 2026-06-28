@@ -6,10 +6,6 @@ export function safePost(url, data = {}) {
     return request.post(url, data)
   }
 
-  if (data.__init__) {
-    return request.post(url, data)
-  }
-
   return request.post(url, data)
 }
 

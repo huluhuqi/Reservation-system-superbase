@@ -7,7 +7,7 @@ import './permission'
 const app = createApp(App)
 
 async function start() {
-  await bootstrap(app)
+  await bootstrap(app, router)
 
   app.use(router)
   app.mount('#app')
