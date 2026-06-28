@@ -12,21 +12,23 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { setUser, isAdmin } from '../api/context.js'
 
 const router = useRouter()
 const username = ref('')
 const password = ref('')
 
 const handleLogin = () => {
+  console.log('点击登录')
+
   const user = {
     id: 1,
     user_name: username.value,
     role: username.value === 'admin' ? 'admin' : 'user'
   }
-  setUser(user)
 
-  if (isAdmin()) {
+  localStorage.setItem('user', JSON.stringify(user))
+
+  if (user.role === 'admin') {
     router.push('/admin/dashboard')
   } else {
     router.push('/home/booking')
