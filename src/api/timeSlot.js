@@ -1,5 +1,4 @@
 import { safePost } from './safeRequest.js'
-import { adaptRequest } from '../utils/fieldAdapter.js'
 import { getUserId, getUserRole } from './context.js'
 import { userApi } from './user.js'
 
@@ -200,17 +199,16 @@ export const timeSlotApi = {
   },
 
   async addDayLock(data) {
-    const safe = adaptRequest(data)
     const payload = {
       s: 'App.Table.Create',
       app_key: APP_KEY,
       user_id: getUserId(),
       role: getUserRole(),
       model_name: LOCKS_TABLE,
-      data: JSON.stringify(safe)
+      data: JSON.stringify(data)
     }
     const res = await safePost('/', { ...payload, __admin: true })
-    return normalizeRecord(res.data || safe)
+    return normalizeRecord(res.data || data)
   },
 
   async deleteLock(id) {
@@ -227,17 +225,15 @@ export const timeSlotApi = {
   },
 
   async getLocks(params = {}) {
-    const safe = adaptRequest(params)
-
     const conditions = []
-    if (safe.lock_date || safe.date) {
-      conditions.push(['lock_date', '=', safe.lock_date || safe.date])
+    if (params.lock_date || params.date) {
+      conditions.push(['lock_date', '=', params.lock_date || params.date])
     }
-    if (safe.instrument_id) {
-      conditions.push(['instrument_id', '=', String(safe.instrument_id)])
+    if (params.instrument_id) {
+      conditions.push(['instrument_id', '=', String(params.instrument_id)])
     }
-    if (safe.category_id) {
-      conditions.push(['category_id', '=', String(safe.category_id)])
+    if (params.category_id) {
+      conditions.push(['category_id', '=', String(params.category_id)])
     }
 
     const whereClause = conditions.length > 0 ? conditions : [['id', '>', '0']]
@@ -250,8 +246,8 @@ export const timeSlotApi = {
       model_name: LOCKS_TABLE,
       logic: 'and',
       where: JSON.stringify(whereClause),
-      page: safe.page || 1,
-      perpage: safe.perpage || 500
+      page: params.page || 1,
+      perpage: params.perpage || 500
     }
 
     const res = await safePost('/', payload, { skipRisk: true })

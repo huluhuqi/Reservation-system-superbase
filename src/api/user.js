@@ -1,5 +1,4 @@
 import { safePost } from './safeRequest.js'
-import { adaptRequest } from '../utils/fieldAdapter.js'
 import { getUserId, getUserRole } from './context.js'
 
 const TABLE = 'kg7500_settings'
@@ -42,11 +41,10 @@ export const userApi = {
   },
 
   async saveSettings(settings) {
-    const safe = adaptRequest(settings)
     const existing = await this.getSettings()
 
     if (existing) {
-      const updateData = denormalizeData(safe)
+      const updateData = denormalizeData(settings)
       const payload = {
         s: 'App.Table.Update',
         app_key: APP_KEY,
@@ -60,7 +58,7 @@ export const userApi = {
       await safePost('/', payload)
       return this.getSettings()
     } else {
-      const createData = denormalizeData(safe)
+      const createData = denormalizeData(settings)
       const payload = {
         s: 'App.Table.Create',
         app_key: APP_KEY,
@@ -73,7 +71,7 @@ export const userApi = {
       if (res.id) {
         return this.getSettings()
       }
-      return normalizeRecord(safe)
+      return normalizeRecord(settings)
     }
   },
 
@@ -83,10 +81,9 @@ export const userApi = {
   },
 
   async addUser(user) {
-    const safe = adaptRequest(user)
     const settings = await this.getSettings()
     const users = settings?.user_list || []
-    users.push(safe)
+    users.push(user)
     return this.saveSettings({ ...settings, user_list: users })
   },
 
@@ -99,10 +96,9 @@ export const userApi = {
   },
 
   async batchAddUsers(newUsers) {
-    const safe = adaptRequest(newUsers)
     const settings = await this.getSettings()
     const users = settings?.user_list || []
-    return this.saveSettings({ ...settings, user_list: [...users, ...safe], __admin: true })
+    return this.saveSettings({ ...settings, user_list: [...users, ...newUsers], __admin: true })
   },
 
   async batchDeleteUsers(userKeys) {

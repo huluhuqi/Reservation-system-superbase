@@ -1,5 +1,4 @@
 import { safePost } from './safeRequest.js'
-import { adaptRequest } from '../utils/fieldAdapter.js'
 import { getUserId, getUserRole } from './context.js'
 
 const CATEGORY_TABLE = 'kg7500_categories'
@@ -51,15 +50,13 @@ export const categoryApi = {
   },
 
   async addCategory(data) {
-    const safe = adaptRequest(data)
-
     const payload = {
       s: 'App.Table.Create',
       app_key: APP_KEY,
       user_id: getUserId(),
       role: getUserRole(),
       model_name: CATEGORY_TABLE,
-      data: JSON.stringify(safe),
+      data: JSON.stringify(data),
       __admin: true
     }
 
@@ -68,12 +65,10 @@ export const categoryApi = {
     if (newId) {
       return getCategoryById(newId)
     }
-    return normalizeRecord(safe)
+    return normalizeRecord(data)
   },
 
   async updateCategory(id, data) {
-    const safe = adaptRequest(data)
-
     const payload = {
       s: 'App.Table.Update',
       app_key: APP_KEY,
@@ -81,7 +76,7 @@ export const categoryApi = {
       role: getUserRole(),
       model_name: CATEGORY_TABLE,
       id,
-      data: JSON.stringify(safe),
+      data: JSON.stringify(data),
       __admin: true
     }
 
@@ -154,7 +149,6 @@ export const categoryApi = {
   },
 
   async saveCategorySettings(category_id, settings) {
-    const safe = adaptRequest(settings)
     const existing = await this.getCategorySettings(category_id)
 
     if (existing) {
@@ -165,14 +159,14 @@ export const categoryApi = {
         role: getUserRole(),
         model_name: 'kg7500_category_settings',
         id: existing.id,
-        data: JSON.stringify(safe),
+        data: JSON.stringify(settings),
         __admin: true
       }
       await safePost('/', payload)
       return this.getCategorySettings(category_id)
     }
 
-    const createData = { ...safe, category_id }
+    const createData = { ...settings, category_id }
     const payload = {
       s: 'App.Table.Create',
       app_key: APP_KEY,

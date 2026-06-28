@@ -1,5 +1,4 @@
 import { safePost } from './safeRequest.js'
-import { adaptRequest } from '../utils/fieldAdapter.js'
 import { getUserId, getUserRole } from './context.js'
 
 const TABLE = 'kg7500_instruments'
@@ -27,14 +26,12 @@ function denormalizeData(data) {
 
 export const instrumentApi = {
   async getInstruments(params = {}) {
-    const safe = adaptRequest(params)
-
     const conditions = []
-    if (safe.category_id) {
-      conditions.push(['category_id', '=', String(safe.category_id)])
+    if (params.category_id) {
+      conditions.push(['category_id', '=', String(params.category_id)])
     }
-    if (safe.keyword) {
-      conditions.push(['name', 'like', `%${safe.keyword}%`])
+    if (params.keyword) {
+      conditions.push(['name', 'like', `%${params.keyword}%`])
     }
 
     const whereClause = conditions.length > 0 ? conditions : [['id', '>', '0']]
@@ -47,8 +44,8 @@ export const instrumentApi = {
       model_name: TABLE,
       logic: 'and',
       where: JSON.stringify(whereClause),
-      page: safe.page || 1,
-      perpage: safe.perpage || 500
+      page: params.page || 1,
+      perpage: params.perpage || 500
     }
 
     const res = await safePost('/', payload, { skipRisk: true })
@@ -73,8 +70,7 @@ export const instrumentApi = {
   },
 
   async addInstrument(data) {
-    const safe = adaptRequest(data)
-    const createData = denormalizeData(safe)
+    const createData = denormalizeData(data)
 
     const payload = {
       s: 'App.Table.Create',
@@ -92,12 +88,11 @@ export const instrumentApi = {
     if (newId) {
       return await this.getInstrumentById(newId)
     }
-    return normalizeRecord(safe)
+    return normalizeRecord(data)
   },
 
   async updateInstrument(id, data) {
-    const safe = adaptRequest(data)
-    const updateData = denormalizeData(safe)
+    const updateData = denormalizeData(data)
 
     const payload = {
       s: 'App.Table.Update',

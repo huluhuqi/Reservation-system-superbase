@@ -1,6 +1,5 @@
 import { safePost } from './safeRequest.js'
-import { adaptRequest } from '../utils/fieldAdapter.js'
-import { getUser, getUserId, getUserRole } from './context.js'
+import { getUserId, getUserRole } from './context.js'
 import { tryLock, unlock, buildLockKey } from '../lock/distributedLock.js'
 import { recordBookingSuccess, recordBookingFailed } from './riskEngine.js'
 import {
@@ -34,17 +33,15 @@ function denormalizeData(data) {
 
 export const bookingApi = {
   async getBookings(params = {}) {
-    const safe = adaptRequest(params)
-
     const conditions = []
-    if (safe.booking_date || safe.date) {
-      conditions.push(['booking_date', '=', safe.booking_date || safe.date])
+    if (params.booking_date || params.date) {
+      conditions.push(['booking_date', '=', params.booking_date || params.date])
     }
-    if (safe.instrument_id) {
-      conditions.push(['instrument_id', '=', String(safe.instrument_id)])
+    if (params.instrument_id) {
+      conditions.push(['instrument_id', '=', String(params.instrument_id)])
     }
-    if (safe.category_id) {
-      conditions.push(['category_id', '=', String(safe.category_id)])
+    if (params.category_id) {
+      conditions.push(['category_id', '=', String(params.category_id)])
     }
 
     const whereClause = conditions.length > 0 ? conditions : [['id', '>', '0']]
@@ -57,8 +54,8 @@ export const bookingApi = {
       model_name: TABLE,
       logic: 'and',
       where: JSON.stringify(whereClause),
-      page: safe.page || 1,
-      perpage: safe.perpage || 500
+      page: params.page || 1,
+      perpage: params.perpage || 500
     }
 
     const res = await safePost('/', payload, { skipRisk: true })
@@ -67,15 +64,13 @@ export const bookingApi = {
   },
 
   async createBooking(data) {
-    const safe = adaptRequest(data)
-
-    const instrument_id = safe.instrument_id
-    const booking_date = safe.booking_date || safe.date
-    const slot_start = safe.slot_start
-    const category_id = safe.category_id
+    const instrument_id = data.instrument_id
+    const booking_date = data.booking_date || data.date
+    const slot_start = data.slot_start
+    const category_id = data.category_id
 
     if (!instrument_id || !booking_date || !slot_start) {
-      logBooking('booking_create_attempt', safe, 'fail', '缺少必要参数')
+      logBooking('booking_create_attempt', data, 'fail', '缺少必要参数')
       throw new Error('预约数据不完整，缺少必要参数')
     }
 
@@ -105,7 +100,7 @@ export const bookingApi = {
 
       logBooking('booking_check_passed', { lockKey }, 'success')
 
-      const createData = denormalizeData(safe)
+      const createData = denormalizeData(data)
 
       const payload = {
         s: 'App.Table.Create',
@@ -123,7 +118,7 @@ export const bookingApi = {
       if (newId) {
         result = await this.getBookingById(newId)
       } else {
-        result = normalizeRecord(safe)
+        result = normalizeRecord(data)
       }
 
       logBooking('booking_write_success', { lockKey, booking_id: result?.id }, 'success')
