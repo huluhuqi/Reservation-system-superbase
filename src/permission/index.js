@@ -1,13 +1,6 @@
 import router from '../router'
 
-let ready = false
-
 router.beforeEach((to, from, next) => {
-
-  if (!ready) {
-    ready = true
-    return next(to.fullPath)
-  }
 
   const token = localStorage.getItem('token')
   const role = localStorage.getItem('role')

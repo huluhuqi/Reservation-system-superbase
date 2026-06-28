@@ -1,16 +1,12 @@
 import { createApp } from 'vue'
 import App from './App.vue'
 import router from './router'
-import { bootstrap } from './bootstrap'
 import './permission'
 
 const app = createApp(App)
 
-async function start() {
-  await bootstrap(app, router)
+app.use(router)
 
-  app.use(router)
+router.isReady().then(() => {
   app.mount('#app')
-}
-
-start()
+})

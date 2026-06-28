@@ -1,11 +1,6 @@
 import request from './request.js'
 
 export function safePost(url, data = {}) {
-
-  if (data.__admin) {
-    return request.post(url, data)
-  }
-
   return request.post(url, data)
 }
 
