@@ -1,7 +1,8 @@
 import axios from 'axios'
+import config from '../config/api'
 
 const service = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE || 'http://api.yesapi.net',
+  baseURL: config.API_BASE_URL,
   timeout: 10000
 })
 
