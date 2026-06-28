@@ -1,28 +1,21 @@
 import router from '../router'
-import { isUserLoggedIn, getUserRole } from '../api/context.js'
 
-let isInit = false
+let init = false
 
 router.beforeEach((to, from, next) => {
-  if (!isInit) {
-    isInit = true
+  const token = localStorage.getItem('token')
+  const role = localStorage.getItem('role')
+
+  if (!init) {
+    init = true
     return next(to.fullPath)
   }
-
-  const token = isUserLoggedIn()
-  const role = getUserRole() || 'user'
 
   if (!token && to.path !== '/login') {
     return next('/login')
   }
 
   if (to.path === '/login') {
-    if (token) {
-      if (role === 'admin' || role === 'super_admin') {
-        return next('/admin/dashboard')
-      }
-      return next('/home/booking')
-    }
     return next()
   }
 
