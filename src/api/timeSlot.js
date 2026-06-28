@@ -47,7 +47,7 @@ export const timeSlotApi = {
         id: settings.id,
         data: JSON.stringify({ custom_slots: slots })
       }
-      return safePost('/', payload, { skipRisk: true })
+      return safePost('/', { ...payload, __admin: true })
     }
     const payload = {
       s: 'App.Table.Create',
@@ -57,7 +57,7 @@ export const timeSlotApi = {
       model_name: SETTINGS_TABLE,
       data: JSON.stringify({ custom_slots: slots })
     }
-    return safePost('/', payload, { skipRisk: true })
+    return safePost('/', { ...payload, __admin: true })
   },
 
   async getCategorySlots(category_id) {
@@ -104,7 +104,7 @@ export const timeSlotApi = {
         id: existing.id,
         data: JSON.stringify({ custom_slots: slots })
       }
-      return safePost('/', payload, { skipRisk: true })
+      return safePost('/', { ...payload, __admin: true })
     }
     const payload = {
       s: 'App.Table.Create',
@@ -114,7 +114,7 @@ export const timeSlotApi = {
       model_name: CATEGORY_SETTINGS_TABLE,
       data: JSON.stringify({ category_id, custom_slots: slots })
     }
-    return safePost('/', payload, { skipRisk: true })
+    return safePost('/', { ...payload, __admin: true })
   },
 
   async getTimeSlots(instrument_id, date) {
@@ -209,7 +209,7 @@ export const timeSlotApi = {
       model_name: LOCKS_TABLE,
       data: JSON.stringify(safe)
     }
-    const res = await safePost('/', payload, { skipRisk: true })
+    const res = await safePost('/', { ...payload, __admin: true })
     return normalizeRecord(res.data || safe)
   },
 
@@ -222,7 +222,7 @@ export const timeSlotApi = {
       model_name: LOCKS_TABLE,
       id
     }
-    await safePost('/', payload, { skipRisk: true })
+    await safePost('/', { ...payload, __admin: true })
     return { success: true }
   },
 

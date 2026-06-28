@@ -54,9 +54,10 @@ export const userApi = {
         role: getUserRole(),
         model_name: TABLE,
         id: existing.id,
-        data: JSON.stringify(updateData)
+        data: JSON.stringify(updateData),
+        __admin: true
       }
-      await safePost('/', payload, { skipRisk: true })
+      await safePost('/', payload)
       return this.getSettings()
     } else {
       const createData = denormalizeData(safe)
@@ -94,14 +95,14 @@ export const userApi = {
     const users = (settings?.user_list || []).filter(
       u => !(u.user_name === user_name && u.employee_no === employee_no)
     )
-    return this.saveSettings({ ...settings, user_list: users })
+    return this.saveSettings({ ...settings, user_list: users, __admin: true })
   },
 
   async batchAddUsers(newUsers) {
     const safe = adaptRequest(newUsers)
     const settings = await this.getSettings()
     const users = settings?.user_list || []
-    return this.saveSettings({ ...settings, user_list: [...users, ...safe] })
+    return this.saveSettings({ ...settings, user_list: [...users, ...safe], __admin: true })
   },
 
   async batchDeleteUsers(userKeys) {
@@ -120,7 +121,7 @@ export const userApi = {
 
   async changeAdminPassword(newPassword) {
     const settings = await this.getSettings()
-    return this.saveSettings({ ...settings, admin_password: newPassword })
+    return this.saveSettings({ ...settings, admin_password: newPassword, __admin: true })
   }
 }
 

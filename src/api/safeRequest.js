@@ -32,7 +32,7 @@ export function safePost(url, data = {}, options = {}) {
 
   detectLegacyFields(data)
 
-  if (data.__init__ || skipRisk) {
+  if (data.__admin === true || data.__init__ || skipRisk) {
     const safeData = adaptRequest(data)
     return request.post(url, safeData)
   }

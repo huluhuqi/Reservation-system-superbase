@@ -42,7 +42,7 @@ export function createSign(data) {
     }
   })
 
-  str += '&key=' + SECRET_KEY
+  str += '&app_secret=' + SECRET_KEY
 
   return md5(str)
 }

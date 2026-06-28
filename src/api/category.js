@@ -59,10 +59,11 @@ export const categoryApi = {
       user_id: getUserId(),
       role: getUserRole(),
       model_name: CATEGORY_TABLE,
-      data: JSON.stringify(safe)
+      data: JSON.stringify(safe),
+      __admin: true
     }
 
-    const res = await safePost('/', payload, { skipRisk: true })
+    const res = await safePost('/', payload)
     const newId = res.id
     if (newId) {
       return getCategoryById(newId)
@@ -80,10 +81,11 @@ export const categoryApi = {
       role: getUserRole(),
       model_name: CATEGORY_TABLE,
       id,
-      data: JSON.stringify(safe)
+      data: JSON.stringify(safe),
+      __admin: true
     }
 
-    await safePost('/', payload, { skipRisk: true })
+    const res = await safePost('/', payload)
     return getCategoryById(id)
   },
 
@@ -110,9 +112,10 @@ export const categoryApi = {
           user_id: getUserId(),
           role: getUserRole(),
           model_name: INSTRUMENT_TABLE,
-          id: inst.id
+          id: inst.id,
+          __admin: true
         }
-        await safePost('/', deletePayload, { skipRisk: true })
+        await safePost('/', deletePayload)
       }
     } catch (e) {
       console.warn('级联删除仪器失败', e)
@@ -124,10 +127,11 @@ export const categoryApi = {
       user_id: getUserId(),
       role: getUserRole(),
       model_name: CATEGORY_TABLE,
-      id
+      id,
+      __admin: true
     }
 
-    await safePost('/', payload, { skipRisk: true })
+    await safePost('/', payload)
     return { success: true }
   },
 
@@ -161,9 +165,10 @@ export const categoryApi = {
         role: getUserRole(),
         model_name: 'kg7500_category_settings',
         id: existing.id,
-        data: JSON.stringify(safe)
+        data: JSON.stringify(safe),
+        __admin: true
       }
-      await safePost('/', payload, { skipRisk: true })
+      await safePost('/', payload)
       return this.getCategorySettings(category_id)
     }
 
@@ -174,10 +179,11 @@ export const categoryApi = {
       user_id: getUserId(),
       role: getUserRole(),
       model_name: 'kg7500_category_settings',
-      data: JSON.stringify(createData)
+      data: JSON.stringify(createData),
+      __admin: true
     }
 
-    const res = await safePost('/', payload, { skipRisk: true })
+    const res = await safePost('/', payload)
     const newId = res.id
     if (newId) {
       return this.getCategorySettings(category_id)

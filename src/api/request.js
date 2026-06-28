@@ -3,7 +3,7 @@ import { adaptRequest } from '../utils/fieldAdapter.js'
 import { securityGateway } from './security.js'
 
 const request = axios.create({
-  baseURL: 'https://api.yesapi.net',
+  baseURL: 'http://api.yesapi.net',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/x-www-form-urlencoded'

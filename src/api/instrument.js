@@ -105,10 +105,11 @@ export const instrumentApi = {
       role: getUserRole(),
       model_name: TABLE,
       id,
-      data: JSON.stringify(updateData)
+      data: JSON.stringify(updateData),
+      __admin: true
     }
 
-    await safePost('/', payload, { skipRisk: true })
+    await safePost('/', payload)
     return await this.getInstrumentById(id)
   },
 
@@ -119,10 +120,11 @@ export const instrumentApi = {
       user_id: getUserId(),
       role: getUserRole(),
       model_name: TABLE,
-      id
+      id,
+      __admin: true
     }
 
-    await safePost('/', payload, { skipRisk: true })
+    await safePost('/', payload)
     return { success: true }
   },
 
