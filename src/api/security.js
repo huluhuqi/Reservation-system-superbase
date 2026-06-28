@@ -25,7 +25,7 @@ export function isFieldAllowed(field) {
   return FIELD_WHITELIST.includes(field)
 }
 
-const SECRET_KEY = 'SaaS_SECRET_2026'
+const SECRET_KEY = 'wGBSfvLMqdJmTwnQHW2M9HCtwFKvzYRZ1DqKeGPaXJrFTN266ZqTDchYXVs9u3egUP5Fgi'
 
 export function createSign(data) {
   if (!data || typeof data !== 'object') return ''
