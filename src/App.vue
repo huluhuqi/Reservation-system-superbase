@@ -5,10 +5,6 @@
 </template>
 
 <script>
-import UserLayout from './layout/UserLayout.vue'
-import AdminLayout from './layout/AdminLayout.vue'
-import Login from './views/Login.vue'
-
 export default {
   data() {
     return {
@@ -20,20 +16,18 @@ export default {
       const path = this.$route.path
 
       if (path === '/login') {
-        return Login
+        return () => import('./views/Login.vue')
       }
 
       if (path.startsWith('/admin')) {
-        return AdminLayout
+        return () => import('./layout/AdminLayout.vue')
       }
 
-      return UserLayout
+      return () => import('./layout/UserLayout.vue')
     }
   },
   mounted() {
-    setTimeout(() => {
-      this.ready = true
-    }, 50)
+    this.ready = true
   }
 }
 </script>
