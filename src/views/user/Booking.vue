@@ -38,7 +38,18 @@ const userInfo = computed(() => getUser())
 
 const quickDateOptions = computed(() => {
   const maxAdvanceDays = Number(systemSettings.value?.booking_advance_days || 7)
-  return Array.from({ length: maxAdvanceDays }, (_, dayDiff) => {
+  const bookingOpenTime = systemSettings.value?.booking_open_time || '09:00'
+
+  const now = new Date()
+  const openHour = parseInt(bookingOpenTime.split(':')[0])
+  const openMinute = parseInt(bookingOpenTime.split(':')[1])
+  const currentMinutes = now.getHours() * 60 + now.getMinutes()
+  const openMinutes = openHour * 60 + openMinute
+
+  // 计算可预约的天数：开放时间前只有1天（今天），开放时间后有maxAdvanceDays天
+  let availableDays = currentMinutes >= openMinutes ? maxAdvanceDays : 1
+
+  return Array.from({ length: availableDays }, (_, dayDiff) => {
     const date = new Date()
     date.setDate(date.getDate() + dayDiff)
     const value = formatDate(date)
@@ -262,16 +273,26 @@ async function loadSlots() {
   resetMessages()
   handleClearSelectedSlots()
 
-  // ===== 新增：日期有效性检查 =====
-  const maxAdvanceDays = Number(systemSettings.value?.booking_advance_days || 1)
+  // ===== 日期有效性检查 =====
+  const maxAdvanceDays = Number(systemSettings.value?.booking_advance_days || 7)
+  const bookingOpenTime = systemSettings.value?.booking_open_time || '09:00'
+  const now = new Date()
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   const selectedDateObj = new Date(selectedDate.value)
   selectedDateObj.setHours(0, 0, 0, 0)
   const dayDiff = Math.floor((selectedDateObj - today) / (1000 * 60 * 60 * 24))
 
+  const openHour = parseInt(bookingOpenTime.split(':')[0])
+  const openMinute = parseInt(bookingOpenTime.split(':')[1])
+  const currentMinutes = now.getHours() * 60 + now.getMinutes()
+  const openMinutes = openHour * 60 + openMinute
+
+  // 开放时间前只能预约今天，开放时间后可以预约 maxAdvanceDays 天
+  const maxAllowedDayDiff = currentMinutes >= openMinutes ? (maxAdvanceDays - 1) : 0
+
   // 如果选择的日期超出可预约范围，提示并返回
-  if (dayDiff > maxAdvanceDays) {
+  if (dayDiff > maxAllowedDayDiff) {
     errorMessage.value = `仅可预约 ${maxAdvanceDays} 天内的日期`
     slots.value = []
     loading.value = false
@@ -286,11 +307,7 @@ async function loadSlots() {
     return
   }
 
-  const bookingOpenTime = systemSettings.value?.booking_open_time || '09:00'
-  const now = new Date()
   const isToday = dayDiff === 0
-  const openHour = parseInt(bookingOpenTime.split(':')[0])
-  const openMinute = parseInt(bookingOpenTime.split(':')[1])
 
   try {
     const baseSlots = customSlots.value.map((slot) => ({
@@ -359,15 +376,23 @@ async function handleReserveSelectedSlots() {
     return
   }
 
-  // ===== 新增：提交前再次验证日期有效性 =====
-  const maxAdvanceDays = Number(systemSettings.value?.booking_advance_days || 1)
+  // ===== 提交前再次验证日期有效性 =====
+  const maxAdvanceDays = Number(systemSettings.value?.booking_advance_days || 7)
+  const bookingOpenTime = systemSettings.value?.booking_open_time || '09:00'
+  const now = new Date()
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   const selectedDateObj = new Date(selectedDate.value)
   selectedDateObj.setHours(0, 0, 0, 0)
   const dayDiff = Math.floor((selectedDateObj - today) / (1000 * 60 * 60 * 24))
 
-  if (dayDiff > maxAdvanceDays) {
+  const openHour = parseInt(bookingOpenTime.split(':')[0])
+  const openMinute = parseInt(bookingOpenTime.split(':')[1])
+  const currentMinutes = now.getHours() * 60 + now.getMinutes()
+  const openMinutes = openHour * 60 + openMinute
+  const maxAllowedDayDiff = currentMinutes >= openMinutes ? (maxAdvanceDays - 1) : 0
+
+  if (dayDiff > maxAllowedDayDiff) {
     errorMessage.value = `仅可预约 ${maxAdvanceDays} 天内的日期`
     return
   }
@@ -516,6 +541,31 @@ onMounted(async () => {
         <div class="category-selected-info">
           <span class="category-icon">{{ categories.find(c => c.id === selectedCategoryId)?.category_icon || '📱' }}</span>
           <span class="category-name">{{ selectedCategoryName }}</span>
+        </div>
+      </div>
+
+      <div class="card-surface availability-card">
+        <div class="section-head">
+          <h3>实时可用预览</h3>
+          <span class="mini-tip">按 {{ formatDateText(selectedDate) }} 统计</span>
+        </div>
+        <div v-if="instruments.length === 0" class="empty-text">
+          暂无仪器数据
+        </div>
+        <div v-else class="availability-list">
+          <div v-for="item in instruments" :key="item.id" class="availability-row">
+            <div class="avail-thumb" :class="availabilityMap[item.id]?.status || 'free'"></div>
+            <div class="avail-main">
+              <div class="avail-title">{{ item.instrument_name }}</div>
+              <div class="avail-sub">
+                <span class="status-dot" :class="availabilityMap[item.id]?.status || 'free'"></span>
+                {{ availabilityMap[item.id]?.label || '可用' }}
+              </div>
+            </div>
+            <div class="avail-count">
+              {{ availabilityMap[item.id]?.freeCount ?? 0 }}/{{ availabilityMap[item.id]?.totalCount ?? 0 }}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -980,5 +1030,60 @@ onMounted(async () => {
   padding: 18px;
   box-shadow: 0 2px 12px rgba(31, 42, 68, 0.06);
   margin-bottom: 14px;
+}
+
+.availability-card {
+  background: linear-gradient(135deg, #f0f6ff 0%, #e8f4ff 100%);
+}
+
+.availability-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.availability-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.avail-thumb {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.avail-thumb.free { background: #27ae60; }
+.avail-thumb.partial { background: #f39c12; }
+.avail-thumb.busy { background: #95a5a6; }
+
+.avail-main {
+  flex: 1;
+}
+
+.avail-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1f2a44;
+}
+
+.avail-sub {
+  font-size: 12px;
+  color: #6b7a99;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.avail-count {
+  font-size: 14px;
+  font-weight: 600;
+  color: #4a90e2;
 }
 </style>
