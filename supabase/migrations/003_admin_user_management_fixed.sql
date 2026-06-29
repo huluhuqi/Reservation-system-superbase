@@ -65,11 +65,9 @@ BEGIN
   -- 获取正确的 instance_id
   v_instance_id := public.get_auth_instance_id();
 
-  -- bcrypt 哈希，修复 $2a$ -> $2b$ 前缀
-  v_encrypted_pw := REPLACE(
-    extensions.crypt(p_password, extensions.gen_salt('bf')),
-    '$2a$', '$2b$'
-  );
+  -- bcrypt 哈希
+  -- 注意：Supabase Auth 使用 bcrypt cost factor = 10，且使用 $2a$ 前缀
+  v_encrypted_pw := extensions.crypt(p_password, extensions.gen_salt('bf', 10));
 
   -- 创建 auth 用户
   INSERT INTO auth.users (
@@ -153,7 +151,7 @@ BEGIN
       ) VALUES (
         gen_random_uuid(),
         v_email,
-        REPLACE(extensions.crypt(v_password, extensions.gen_salt('bf')), '$2a$', '$2b$'),
+        extensions.crypt(v_password, extensions.gen_salt('bf', 10)),
         now(), now(), now(),
         jsonb_build_object('username', v_username, 'employee_no', v_employee_no),
         jsonb_build_object('provider', 'email', 'providers', ARRAY['email']),
