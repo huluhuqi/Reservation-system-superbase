@@ -78,6 +78,10 @@ CREATE TABLE public.booking (
   slot_end TEXT NOT NULL,
   slot_index INTEGER NOT NULL DEFAULT 0,
 
+  instrument_name TEXT,
+  user_name TEXT,
+  user_email TEXT,
+
   status TEXT DEFAULT 'pending',
   remark TEXT,
 

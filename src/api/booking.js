@@ -12,11 +12,10 @@ function getCurrentUser() {
 function normalizeBooking(item) {
   return {
     ...item,
-    instrument_name: item.instrument?.name || '',
+    instrument_name: item.instrument_name || '',
     booking_remark: item.remark || '',
-    user_name: item.users?.username || item.user_name || '',
-    user_email: item.users?.email || '',
-    employee_no: item.users?.employee_no || item.employee_no || ''
+    user_name: item.user_name || '',
+    user_email: item.user_email || ''
   }
 }
 
@@ -24,16 +23,14 @@ export const BookingAPI = {
   list: async () => {
     const { data, error } = await supabase
       .from('booking')
-      .select('*, instrument(name), users(username, email)')
+      .select('*')
       .order('created_at', { ascending: false })
     if (error) throw error
     return (data || []).map(normalizeBooking)
   },
 
   getByDate: async (date, instrumentId, categoryId) => {
-    let query = supabase
-      .from('booking')
-      .select('*, instrument(name), users(username, email)')
+    let query = supabase.from('booking').select('*')
     if (date) query = query.eq('booking_date', date)
     if (instrumentId) query = query.eq('instrument_id', instrumentId)
     if (categoryId) query = query.eq('category_id', categoryId)
@@ -47,7 +44,7 @@ export const BookingAPI = {
     if (!user?.id) return []
     const { data, error } = await supabase
       .from('booking')
-      .select('*, instrument(name)')
+      .select('*')
       .eq('user_id', user.id)
       .order('booking_date', { ascending: false })
       .order('slot_start', { ascending: true })
@@ -59,7 +56,10 @@ export const BookingAPI = {
     const user = getCurrentUser()
     const insertData = {
       user_id: user?.id,
+      user_name: user?.user_name || '',
+      user_email: user?.email || '',
       instrument_id: payload.instrument_id,
+      instrument_name: payload.instrument_name || '',
       category_id: payload.category_id,
       booking_date: payload.booking_date,
       slot_start: payload.slot_start,
@@ -71,7 +71,7 @@ export const BookingAPI = {
     const { data, error } = await supabase
       .from('booking')
       .insert(insertData)
-      .select('*, instrument(name), users(username, email)')
+      .select()
       .single()
     if (error) throw error
     return normalizeBooking(data)
@@ -81,7 +81,10 @@ export const BookingAPI = {
     const user = getCurrentUser()
     const insertData = items.map(item => ({
       user_id: user?.id,
+      user_name: user?.user_name || '',
+      user_email: user?.email || '',
       instrument_id: item.instrument_id,
+      instrument_name: item.instrument_name || '',
       category_id: item.category_id,
       booking_date: item.booking_date,
       slot_start: item.slot_start,
@@ -93,7 +96,7 @@ export const BookingAPI = {
     const { data, error } = await supabase
       .from('booking')
       .insert(insertData)
-      .select('*, instrument(name), users(username, email)')
+      .select()
     if (error) throw error
     return (data || []).map(normalizeBooking)
   },
@@ -108,7 +111,7 @@ export const BookingAPI = {
       .from('booking')
       .update(updateData)
       .eq('id', id)
-      .select('*, instrument(name), users(username, email)')
+      .select()
       .single()
     if (error) throw error
     return normalizeBooking(data)

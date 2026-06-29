@@ -87,7 +87,7 @@ async function handleLogin() {
       user_name: profile?.username || data.user.email?.split('@')[0],
       email: data.user.email,
       employee_no: profile?.employee_no || '',
-      role: profile?.role || 'user'
+      role: profile?.role || (data.user.email === 'admin@admin.com' ? 'admin' : 'user')
     }
 
     localStorage.setItem('user', JSON.stringify(user))

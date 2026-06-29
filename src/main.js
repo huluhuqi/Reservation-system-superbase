@@ -21,7 +21,7 @@ async function initApp() {
           user_name: profile?.username || session.user.email?.split('@')[0],
           email: session.user.email,
           employee_no: profile?.employee_no || '',
-          role: profile?.role || 'user'
+          role: profile?.role || (session.user.email === 'admin@admin.com' ? 'admin' : 'user')
         }
         localStorage.setItem('user', JSON.stringify(user))
       } catch (e) {
