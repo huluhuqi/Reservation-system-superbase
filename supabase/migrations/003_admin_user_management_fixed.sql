@@ -1,5 +1,5 @@
 -- ============================================================
--- 管理员用户管理函数（修复版 - 使用 extensions schema 中的 pgcrypto）
+-- 管理员用户管理函数（修复版 V2 - 处理触发器重复插入问题）
 -- ============================================================
 
 -- 确保 pgcrypto 扩展已启用（在 extensions schema 中）
@@ -69,7 +69,7 @@ BEGIN
   -- 使用 extensions schema 中的 pgcrypto 函数加密密码
   v_encrypted_pw := extensions.crypt(p_password, extensions.gen_salt('bf'));
 
-  -- 创建 auth 用户
+  -- 创建 auth 用户（触发器 on_auth_user_created 会自动向 public.users 插入）
   INSERT INTO auth.users (
     id,
     email,
@@ -99,9 +99,15 @@ BEGIN
   )
   RETURNING id INTO v_user_id;
 
-  -- 同步到 public.users 表
+  -- 更新 public.users 表，补充 employee_no 和角色（触发器只插入了基本信息）
+  -- 使用 INSERT ... ON CONFLICT 兼容触发器可能已插入的情况
   INSERT INTO public.users (id, email, username, employee_no, role)
-  VALUES (v_user_id, v_email, TRIM(p_username), TRIM(p_employee_no), p_role);
+  VALUES (v_user_id, v_email, TRIM(p_username), TRIM(p_employee_no), p_role)
+  ON CONFLICT (id) DO UPDATE SET
+    employee_no = EXCLUDED.employee_no,
+    role = EXCLUDED.role,
+    username = EXCLUDED.username,
+    email = EXCLUDED.email;
 
   RETURN jsonb_build_object(
     'id', v_user_id,
@@ -183,9 +189,14 @@ BEGIN
       )
       RETURNING id INTO v_user_id;
 
-      -- 同步到 public.users
+      -- 同步到 public.users（使用 ON CONFLICT 处理触发器重复插入）
       INSERT INTO public.users (id, email, username, employee_no, role)
-      VALUES (v_user_id, v_email, v_username, v_employee_no, v_role);
+      VALUES (v_user_id, v_email, v_username, v_employee_no, v_role)
+      ON CONFLICT (id) DO UPDATE SET
+        employee_no = EXCLUDED.employee_no,
+        role = EXCLUDED.role,
+        username = EXCLUDED.username,
+        email = EXCLUDED.email;
 
       v_success_count := v_success_count + 1;
     EXCEPTION WHEN OTHERS THEN
@@ -224,7 +235,7 @@ BEGIN
     RAISE EXCEPTION '不能删除当前登录的管理员账号';
   END IF;
 
-  -- 删除 auth 用户（会级联删除 public.users）
+  -- 删除 auth 用户（会级联删除 public.users，因为外键设置了 ON DELETE CASCADE）
   DELETE FROM auth.users WHERE id = p_user_id;
 
   RETURN TRUE;
