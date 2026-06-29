@@ -38,18 +38,8 @@ const userInfo = computed(() => getUser())
 
 const quickDateOptions = computed(() => {
   const maxAdvanceDays = Number(systemSettings.value?.booking_advance_days || 7)
-  const bookingOpenTime = systemSettings.value?.booking_open_time || '09:00'
 
-  const now = new Date()
-  const openHour = parseInt(bookingOpenTime.split(':')[0])
-  const openMinute = parseInt(bookingOpenTime.split(':')[1])
-  const currentMinutes = now.getHours() * 60 + now.getMinutes()
-  const openMinutes = openHour * 60 + openMinute
-
-  // 计算可预约的天数：开放时间前只有1天（今天），开放时间后有maxAdvanceDays天
-  let availableDays = currentMinutes >= openMinutes ? maxAdvanceDays : 1
-
-  return Array.from({ length: availableDays }, (_, dayDiff) => {
+  return Array.from({ length: maxAdvanceDays }, (_, dayDiff) => {
     const date = new Date()
     date.setDate(date.getDate() + dayDiff)
     const value = formatDate(date)
@@ -288,8 +278,8 @@ async function loadSlots() {
   const currentMinutes = now.getHours() * 60 + now.getMinutes()
   const openMinutes = openHour * 60 + openMinute
 
-  // 开放时间前只能预约今天，开放时间后可以预约 maxAdvanceDays 天
-  const maxAllowedDayDiff = currentMinutes >= openMinutes ? (maxAdvanceDays - 1) : 0
+  // 可预约天数固定为 maxAdvanceDays 天（包括今天）
+  const maxAllowedDayDiff = maxAdvanceDays - 1
 
   // 如果选择的日期超出可预约范围，提示并返回
   if (dayDiff > maxAllowedDayDiff) {
@@ -308,6 +298,7 @@ async function loadSlots() {
   }
 
   const isToday = dayDiff === 0
+  const isBeforeOpenTime = isToday && currentMinutes < openMinutes
 
   try {
     const baseSlots = customSlots.value.map((slot) => ({
@@ -334,15 +325,19 @@ async function loadSlots() {
       if (dayLock) return { ...slot, status: 'locked', text: '整天锁定' }
       if (slotLockMap[slot.slot_index]) return { ...slot, status: 'locked', text: '时段锁定' }
 
-      // ===== 新增：检查开放预约时间 =====
+      // ===== 检查开放预约时间 =====
       if (isToday) {
         const slotHour = parseInt(slot.slot_start.split(':')[0])
         const slotMinute = parseInt(slot.slot_start.split(':')[1])
-        // 如果当前时间已经超过了时段开始时间，标记为过期
-        const currentMinutes = now.getHours() * 60 + now.getMinutes()
         const slotMinutes = slotHour * 60 + slotMinute
-        const openMinutes = openHour * 60 + openMinute
-        if (slotMinutes < openMinutes || currentMinutes >= slotMinutes) {
+
+        // 未到开放时间：所有时段显示"未到开放时间"
+        if (isBeforeOpenTime) {
+          return { ...slot, status: 'expired', text: '未到开放时间' }
+        }
+
+        // 已过开放时间：已过的时段标记为过期
+        if (currentMinutes >= slotMinutes) {
           return { ...slot, status: 'expired', text: '已过期' }
         }
       }
@@ -390,7 +385,7 @@ async function handleReserveSelectedSlots() {
   const openMinute = parseInt(bookingOpenTime.split(':')[1])
   const currentMinutes = now.getHours() * 60 + now.getMinutes()
   const openMinutes = openHour * 60 + openMinute
-  const maxAllowedDayDiff = currentMinutes >= openMinutes ? (maxAdvanceDays - 1) : 0
+  const maxAllowedDayDiff = maxAdvanceDays - 1
 
   if (dayDiff > maxAllowedDayDiff) {
     errorMessage.value = `仅可预约 ${maxAdvanceDays} 天内的日期`
@@ -398,6 +393,12 @@ async function handleReserveSelectedSlots() {
   }
   if (dayDiff < 0) {
     errorMessage.value = '不能预约历史日期'
+    return
+  }
+
+  const isToday = dayDiff === 0
+  if (isToday && currentMinutes < openMinutes) {
+    errorMessage.value = `未到开放预约时间（${bookingOpenTime}）`
     return
   }
 

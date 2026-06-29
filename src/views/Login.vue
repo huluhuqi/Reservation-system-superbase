@@ -5,31 +5,17 @@
       <div v-if="errorMessage" class="error-msg">{{ errorMessage }}</div>
       <div v-if="successMessage" class="success-msg">{{ successMessage }}</div>
 
-      <template v-if="!isRegister">
-        <input v-model="email" placeholder="邮箱" type="email" />
-        <input v-model="password" placeholder="密码" type="password" />
-        <button @click="handleLogin" :disabled="loading">
-          {{ loading ? '登录中...' : '登录' }}
-        </button>
-        <div class="switch-link">
-          <button @click="isRegister = true">没有账号？注册</button>
-        </div>
-      </template>
+      <input v-model="name" placeholder="姓名" type="text" />
+      <input v-model="employeeNo" placeholder="工号" type="text" />
+      <input v-model="password" placeholder="密码" type="password" @keyup.enter="handleLogin" />
 
-      <template v-else>
-        <input v-model="registerName" placeholder="姓名" type="text" />
-        <input v-model="email" placeholder="邮箱" type="email" />
-        <input v-model="password" placeholder="密码" type="password" />
-        <button @click="handleRegister" :disabled="loading">
-          {{ loading ? '注册中...' : '注册' }}
-        </button>
-        <div class="switch-link">
-          <button @click="isRegister = false">已有账号？登录</button>
-        </div>
-      </template>
+      <button @click="handleLogin" :disabled="loading">
+        {{ loading ? '登录中...' : '登录' }}
+      </button>
 
       <div class="tip-text">
-        <p>提示：admin@admin.com 登录进入管理后台</p>
+        <p>请使用管理员分配的账号登录</p>
+        <p>默认密码：123456</p>
       </div>
     </div>
   </div>
@@ -41,36 +27,38 @@ import { useRouter } from 'vue-router'
 import { supabase } from '@/lib/supabase'
 
 const router = useRouter()
-const email = ref('')
+const name = ref('')
+const employeeNo = ref('')
 const password = ref('')
-const registerName = ref('')
 const errorMessage = ref('')
 const successMessage = ref('')
 const loading = ref(false)
-const isRegister = ref(false)
 
 async function handleLogin() {
   errorMessage.value = ''
   loading.value = true
 
   try {
-    if (!email.value.trim()) {
-      throw new Error('请输入邮箱')
+    if (!name.value.trim()) {
+      throw new Error('请输入姓名')
+    }
+    if (!employeeNo.value.trim()) {
+      throw new Error('请输入工号')
     }
     if (!password.value.trim()) {
       throw new Error('请输入密码')
     }
 
+    const email = employeeNo.value.trim().toLowerCase() + '@system.local'
+
     const { data, error } = await supabase.auth.signInWithPassword({
-      email: email.value.trim(),
+      email: email,
       password: password.value
     })
 
     if (error) {
-      throw error
+      throw new Error('工号或密码错误')
     }
-
-    console.log('登录成功', data)
 
     const { data: profile, error: profileError } = await supabase
       .from('users')
@@ -79,15 +67,20 @@ async function handleLogin() {
       .single()
 
     if (profileError) {
-      console.warn('获取用户profile失败，使用默认值', profileError)
+      console.warn('获取用户profile失败', profileError)
+    }
+
+    if (profile && profile.username && profile.username !== name.value.trim()) {
+      await supabase.auth.signOut()
+      throw new Error('姓名与工号不匹配')
     }
 
     const user = {
       id: data.user.id,
-      user_name: profile?.username || data.user.email?.split('@')[0],
+      user_name: profile?.username || name.value.trim(),
       email: data.user.email,
-      employee_no: profile?.employee_no || '',
-      role: profile?.role || (data.user.email === 'admin@admin.com' ? 'admin' : 'user')
+      employee_no: profile?.employee_no || employeeNo.value.trim(),
+      role: profile?.role || 'user'
     }
 
     localStorage.setItem('user', JSON.stringify(user))
@@ -99,50 +92,7 @@ async function handleLogin() {
     }
   } catch (e) {
     console.error('登录失败', e)
-    errorMessage.value = e.message || '登录失败，请检查邮箱和密码'
-  } finally {
-    loading.value = false
-  }
-}
-
-async function handleRegister() {
-  errorMessage.value = ''
-  successMessage.value = ''
-  loading.value = true
-
-  try {
-    if (!registerName.value.trim()) {
-      throw new Error('请输入姓名')
-    }
-    if (!email.value.trim()) {
-      throw new Error('请输入邮箱')
-    }
-    if (!password.value.trim()) {
-      throw new Error('请输入密码')
-    }
-    if (password.value.length < 6) {
-      throw new Error('密码至少6位')
-    }
-
-    const { data, error } = await supabase.auth.signUp({
-      email: email.value.trim(),
-      password: password.value,
-      options: {
-        data: {
-          username: registerName.value.trim()
-        }
-      }
-    })
-
-    if (error) {
-      throw error
-    }
-
-    successMessage.value = '注册成功！请检查邮箱验证后登录'
-    isRegister.value = false
-  } catch (e) {
-    console.error('注册失败', e)
-    errorMessage.value = e.message || '注册失败，请重试'
+    errorMessage.value = e.message || '登录失败，请检查工号和密码'
   } finally {
     loading.value = false
   }
@@ -184,6 +134,16 @@ async function handleRegister() {
   text-align: center;
 }
 
+.success-msg {
+  padding: 12px 16px;
+  background: #e8f5e9;
+  color: #27ae60;
+  border-radius: 8px;
+  font-size: 14px;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
 .login-card input {
   width: 100%;
   padding: 14px 16px;
@@ -213,8 +173,13 @@ async function handleRegister() {
   transition: transform 0.2s;
 }
 
-.login-card button:hover {
+.login-card button:hover:not(:disabled) {
   transform: translateY(-2px);
+}
+
+.login-card button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .tip-text {

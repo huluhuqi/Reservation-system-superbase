@@ -1,5 +1,5 @@
 <script setup>
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { supabase } from '@/lib/supabase'
 
@@ -20,11 +20,83 @@ const isAdmin = computed(() => {
   return user && user.role === 'admin'
 })
 
+const showPasswordModal = ref(false)
+const oldPassword = ref('')
+const newPassword = ref('')
+const confirmPassword = ref('')
+const passwordLoading = ref(false)
+const passwordError = ref('')
+const passwordSuccess = ref('')
+
 const menuItems = [
   { icon: '📋', label: '我的预约', path: '/home/records' },
   { icon: '🔔', label: '消息通知', path: '/home/account' },
   { icon: '⚙️', label: '设置', path: '/home/account' }
 ]
+
+function openPasswordModal() {
+  oldPassword.value = ''
+  newPassword.value = ''
+  confirmPassword.value = ''
+  passwordError.value = ''
+  passwordSuccess.value = ''
+  showPasswordModal.value = true
+}
+
+async function handleChangePassword() {
+  passwordError.value = ''
+  passwordSuccess.value = ''
+
+  if (!oldPassword.value.trim()) {
+    passwordError.value = '请输入原密码'
+    return
+  }
+  if (!newPassword.value.trim()) {
+    passwordError.value = '请输入新密码'
+    return
+  }
+  if (newPassword.value.length < 6) {
+    passwordError.value = '新密码至少6位'
+    return
+  }
+  if (newPassword.value !== confirmPassword.value) {
+    passwordError.value = '两次输入的新密码不一致'
+    return
+  }
+
+  passwordLoading.value = true
+  try {
+    const user = userInfo.value
+    if (!user || !user.email) {
+      throw new Error('用户信息异常，请重新登录')
+    }
+
+    const { error: signInError } = await supabase.auth.signInWithPassword({
+      email: user.email,
+      password: oldPassword.value
+    })
+    if (signInError) {
+      throw new Error('原密码错误')
+    }
+
+    const { error: updateError } = await supabase.auth.updateUser({
+      password: newPassword.value
+    })
+    if (updateError) {
+      throw updateError
+    }
+
+    passwordSuccess.value = '密码修改成功'
+    setTimeout(() => {
+      showPasswordModal.value = false
+    }, 1500)
+  } catch (e) {
+    console.error('修改密码失败', e)
+    passwordError.value = e.message || '修改密码失败'
+  } finally {
+    passwordLoading.value = false
+  }
+}
 
 async function handleLogout() {
   try {
@@ -71,11 +143,45 @@ function handleGoToAdmin() {
     </div>
 
     <div class="menu-card card-surface">
+      <button class="menu-item" type="button" @click="openPasswordModal">
+        <span class="menu-icon">🔑</span>
+        <span class="menu-label">修改密码</span>
+        <span class="menu-arrow">›</span>
+      </button>
+    </div>
+
+    <div class="menu-card card-surface">
       <button class="menu-item danger" type="button" @click="handleLogout">
         <span class="menu-icon">🚪</span>
         <span class="menu-label">退出登录</span>
         <span class="menu-arrow">›</span>
       </button>
+    </div>
+
+    <div v-if="showPasswordModal" class="modal-mask" @click.self="showPasswordModal = false">
+      <div class="modal-box">
+        <h3>修改密码</h3>
+        <p v-if="passwordError" class="notice error">{{ passwordError }}</p>
+        <p v-if="passwordSuccess" class="notice success">{{ passwordSuccess }}</p>
+        <div class="form-group">
+          <label>原密码</label>
+          <input v-model="oldPassword" placeholder="请输入原密码" type="password" />
+        </div>
+        <div class="form-group">
+          <label>新密码</label>
+          <input v-model="newPassword" placeholder="请输入新密码（至少6位）" type="password" />
+        </div>
+        <div class="form-group">
+          <label>确认新密码</label>
+          <input v-model="confirmPassword" placeholder="请再次输入新密码" type="password" @keyup.enter="handleChangePassword" />
+        </div>
+        <div class="modal-actions">
+          <button class="secondary-btn" type="button" @click="showPasswordModal = false">取消</button>
+          <button class="primary-btn" type="button" :disabled="passwordLoading" @click="handleChangePassword">
+            {{ passwordLoading ? '修改中...' : '确认修改' }}
+          </button>
+        </div>
+      </div>
     </div>
 
     <div class="about-section">
@@ -202,5 +308,119 @@ function handleGoToAdmin() {
   padding: 18px;
   box-shadow: 0 2px 12px rgba(31, 42, 68, 0.06);
   margin-bottom: 14px;
+}
+
+.modal-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modal-box {
+  background: white;
+  border-radius: 16px;
+  padding: 24px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.modal-box h3 {
+  margin: 0 0 20px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f2a44;
+}
+
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #4a5568;
+}
+
+.form-group input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.form-group input:focus {
+  border-color: #4a90e2;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 20px;
+}
+
+.primary-btn,
+.secondary-btn {
+  border: none;
+  border-radius: 8px;
+  padding: 10px 20px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.primary-btn {
+  background: #4a90e2;
+  color: white;
+}
+
+.primary-btn:hover:not(:disabled) {
+  background: #357abd;
+}
+
+.primary-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.secondary-btn {
+  background: #f0f4f9;
+  color: #1f2a44;
+}
+
+.secondary-btn:hover {
+  background: #e2e8f0;
+}
+
+.notice {
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+
+.notice.error {
+  background: #fef0f0;
+  color: #e74c3c;
+}
+
+.notice.success {
+  background: #e8f5e9;
+  color: #27ae60;
 }
 </style>
