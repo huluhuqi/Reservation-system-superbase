@@ -235,6 +235,36 @@ async function loadSlots() {
   resetMessages()
   handleClearSelectedSlots()
 
+  // ===== 新增：日期有效性检查 =====
+  const maxAdvanceDays = Number(systemSettings.value?.booking_advance_days || 1)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const selectedDateObj = new Date(selectedDate.value)
+  selectedDateObj.setHours(0, 0, 0, 0)
+  const dayDiff = Math.floor((selectedDateObj - today) / (1000 * 60 * 60 * 24))
+
+  // 如果选择的日期超出可预约范围，提示并返回
+  if (dayDiff > maxAdvanceDays) {
+    errorMessage.value = `仅可预约 ${maxAdvanceDays} 天内的日期`
+    slots.value = []
+    loading.value = false
+    return
+  }
+
+  // 如果选择的是历史日期，提示并返回
+  if (dayDiff < 0) {
+    errorMessage.value = '不能预约历史日期'
+    slots.value = []
+    loading.value = false
+    return
+  }
+
+  const bookingOpenTime = systemSettings.value?.booking_open_time || '09:00'
+  const now = new Date()
+  const isToday = dayDiff === 0
+  const openHour = parseInt(bookingOpenTime.split(':')[0])
+  const openMinute = parseInt(bookingOpenTime.split(':')[1])
+
   try {
     const baseSlots = customSlots.value.map((slot) => ({
       ...slot,
@@ -259,6 +289,19 @@ async function loadSlots() {
     slots.value = baseSlots.map((slot) => {
       if (dayLock) return { ...slot, status: 'locked', text: '整天锁定' }
       if (slotLockMap[slot.slot_index]) return { ...slot, status: 'locked', text: '时段锁定' }
+
+      // ===== 新增：检查开放预约时间 =====
+      if (isToday) {
+        const slotHour = parseInt(slot.slot_start.split(':')[0])
+        const slotMinute = parseInt(slot.slot_start.split(':')[1])
+        // 如果当前时间已经超过了时段开始时间，标记为过期
+        const currentMinutes = now.getHours() * 60 + now.getMinutes()
+        const slotMinutes = slotHour * 60 + slotMinute
+        const openMinutes = openHour * 60 + openMinute
+        if (slotMinutes < openMinutes || currentMinutes >= slotMinutes) {
+          return { ...slot, status: 'expired', text: '已过期' }
+        }
+      }
 
       const matchedBooking = bookings.find((item) => item.slot_start === slot.slot_start)
       if (matchedBooking) {
@@ -289,10 +332,33 @@ async function handleReserveSelectedSlots() {
     return
   }
 
+  // ===== 新增：提交前再次验证日期有效性 =====
+  const maxAdvanceDays = Number(systemSettings.value?.booking_advance_days || 1)
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const selectedDateObj = new Date(selectedDate.value)
+  selectedDateObj.setHours(0, 0, 0, 0)
+  const dayDiff = Math.floor((selectedDateObj - today) / (1000 * 60 * 60 * 24))
+
+  if (dayDiff > maxAdvanceDays) {
+    errorMessage.value = `仅可预约 ${maxAdvanceDays} 天内的日期`
+    return
+  }
+  if (dayDiff < 0) {
+    errorMessage.value = '不能预约历史日期'
+    return
+  }
+
   operating.value = true
   resetMessages()
 
   try {
+    // 检查是否有已过期的时段被选中
+    const expiredSlots = selectedSlotsForOperation.value.filter(slot => slot.status === 'expired')
+    if (expiredSlots.length > 0) {
+      errorMessage.value = '所选时段中包含已过期的时段，请重新选择'
+      return
+    }
     const existingBookings = await BookingAPI.getByDate(
       selectedDate.value, selectedInstrumentId.value, selectedCategoryId.value
     )
