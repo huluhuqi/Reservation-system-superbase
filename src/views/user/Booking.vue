@@ -183,7 +183,26 @@ async function loadAvailability() {
     return
   }
 
-  const totalCount = customSlots.value.length
+  // 如果没有自定义时段，使用系统默认时段
+  let slotsToUse = customSlots.value
+  if (slotsToUse.length === 0) {
+    slotsToUse = systemSettings.value?.custom_slots || []
+    if (slotsToUse.length === 0) {
+      // 如果系统设置也没有，使用基础时段
+      slotsToUse = [
+        { slot_start: '09:00', slot_end: '10:00' },
+        { slot_start: '10:00', slot_end: '11:00' },
+        { slot_start: '11:00', slot_end: '12:00' },
+        { slot_start: '13:00', slot_end: '14:00' },
+        { slot_start: '14:00', slot_end: '15:00' },
+        { slot_start: '15:00', slot_end: '16:00' },
+        { slot_start: '16:00', slot_end: '17:00' },
+        { slot_start: '17:00', slot_end: '18:00' }
+      ]
+    }
+  }
+
+  const totalCount = slotsToUse.length
   if (totalCount === 0) return
 
   try {
@@ -203,7 +222,7 @@ async function loadAvailability() {
 
       let freeCount = 0
       for (let i = 0; i < totalCount; i++) {
-        const slot = customSlots.value[i]
+        const slot = slotsToUse[i]
         if (dayLock || slotLockSet.has(i) || bookingSet.has(slot?.slot_start)) {
           continue
         }
