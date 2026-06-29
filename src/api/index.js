@@ -1,5 +1,5 @@
 export { CategoryAPI } from './category'
 export { InstrumentAPI } from './instrument'
 export { BookingAPI } from './booking'
-export { TimeSlotAPI } from './timeslot'
+export { TimeSlotAPI } from './timeSlot'
 export { UserAPI } from './user'
