@@ -178,6 +178,7 @@ async function loadInstruments() {
 }
 
 async function loadAvailability() {
+  // 如果没有加载完仪器，等待一下
   if (instruments.value.length === 0) {
     availabilityMap.value = {}
     return
@@ -185,25 +186,29 @@ async function loadAvailability() {
 
   // 如果没有自定义时段，使用系统默认时段
   let slotsToUse = customSlots.value
-  if (slotsToUse.length === 0) {
-    slotsToUse = systemSettings.value?.custom_slots || []
-    if (slotsToUse.length === 0) {
-      // 如果系统设置也没有，使用基础时段
-      slotsToUse = [
-        { slot_start: '09:00', slot_end: '10:00' },
-        { slot_start: '10:00', slot_end: '11:00' },
-        { slot_start: '11:00', slot_end: '12:00' },
-        { slot_start: '13:00', slot_end: '14:00' },
-        { slot_start: '14:00', slot_end: '15:00' },
-        { slot_start: '15:00', slot_end: '16:00' },
-        { slot_start: '16:00', slot_end: '17:00' },
-        { slot_start: '17:00', slot_end: '18:00' }
-      ]
-    }
+  if (!slotsToUse || slotsToUse.length === 0) {
+    const systemSlots = systemSettings.value?.custom_slots
+    slotsToUse = systemSlots && systemSlots.length > 0 ? systemSlots : null
+  }
+  if (!slotsToUse || slotsToUse.length === 0) {
+    // 如果系统设置也没有，使用基础时段
+    slotsToUse = [
+      { slot_start: '09:00', slot_end: '10:00' },
+      { slot_start: '10:00', slot_end: '11:00' },
+      { slot_start: '11:00', slot_end: '12:00' },
+      { slot_start: '13:00', slot_end: '14:00' },
+      { slot_start: '14:00', slot_end: '15:00' },
+      { slot_start: '15:00', slot_end: '16:00' },
+      { slot_start: '16:00', slot_end: '17:00' },
+      { slot_start: '17:00', slot_end: '18:00' }
+    ]
   }
 
   const totalCount = slotsToUse.length
-  if (totalCount === 0) return
+  if (totalCount === 0) {
+    availabilityMap.value = {}
+    return
+  }
 
   try {
     const today = getTodayDate()
@@ -241,6 +246,7 @@ async function loadAvailability() {
     availabilityMap.value = nextMap
   } catch (e) {
     console.error('加载可用状态失败', e)
+    availabilityMap.value = {}
   }
 }
 
