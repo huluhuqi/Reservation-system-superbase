@@ -37,8 +37,8 @@ const remark = ref('')
 const userInfo = computed(() => getUser())
 
 const quickDateOptions = computed(() => {
-  const maxAdvanceDays = Number(systemSettings.value?.booking_advance_days || 1)
-  return Array.from({ length: maxAdvanceDays + 1 }, (_, dayDiff) => {
+  const maxAdvanceDays = Number(systemSettings.value?.booking_advance_days || 7)
+  return Array.from({ length: maxAdvanceDays }, (_, dayDiff) => {
     const date = new Date()
     date.setDate(date.getDate() + dayDiff)
     const value = formatDate(date)
@@ -152,6 +152,7 @@ async function handleSelectCategory(category) {
   }
 
   await loadInstruments()
+  // 确保仪器加载完成后刷新可用性预览
   await loadAvailability()
 }
 
@@ -179,7 +180,7 @@ async function loadInstruments() {
 
 async function loadAvailability() {
   // 如果没有加载完仪器，等待一下
-  if (instruments.value.length === 0) {
+  if (!selectedCategoryId.value || instruments.value.length === 0) {
     availabilityMap.value = {}
     return
   }
@@ -211,10 +212,11 @@ async function loadAvailability() {
   }
 
   try {
-    const today = getTodayDate()
+    // 使用当前选择的日期（而非固定今天），确保预览与选择日期一致
+    const checkDate = selectedDate.value || getTodayDate()
     const [bookings, locks] = await Promise.all([
-      BookingAPI.getByDate(today, null, selectedCategoryId.value),
-      TimeSlotAPI.getLocks({ lock_date: today, category_id: selectedCategoryId.value })
+      BookingAPI.getByDate(checkDate, null, selectedCategoryId.value),
+      TimeSlotAPI.getLocks({ lock_date: checkDate, category_id: selectedCategoryId.value })
     ])
 
     const nextMap = {}
@@ -222,7 +224,7 @@ async function loadAvailability() {
       const instBookings = bookings.filter(b => b.instrument_id === instrument.id)
       const instLocks = locks.filter(l => l.instrument_id === instrument.id)
       const bookingSet = new Set(instBookings.map(b => b.slot_start))
-      const dayLock = instLocks.some(l => l.lock_type === 'day' && l.lock_date === today)
+      const dayLock = instLocks.some(l => l.lock_type === 'day' && l.lock_date === checkDate)
       const slotLockSet = new Set(instLocks.filter(l => l.lock_type === 'slot').map(l => l.slot_index))
 
       let freeCount = 0
@@ -465,7 +467,10 @@ watch([selectedDate, selectedInstrumentId], async () => {
   if (selectedInstrumentId.value) {
     await loadSlots()
   }
-  await loadAvailability()
+  // 只有仪器列表有数据时才加载可用性预览
+  if (instruments.value.length > 0) {
+    await loadAvailability()
+  }
 })
 
 onMounted(async () => {
