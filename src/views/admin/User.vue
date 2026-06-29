@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { UserAPI, AdminUsersAPI } from '@/api'
+import { UserAPI } from '@/api'
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -88,7 +88,7 @@ async function handleAddUser() {
   submitting.value = true
   errorMessage.value = ''
   try {
-    await AdminUsersAPI.createUser(
+    await UserAPI.createUser(
       newUser.value.employee_no.trim(),
       newUser.value.username.trim(),
       '123456',
@@ -139,7 +139,7 @@ async function handleBatchCreate() {
   submitting.value = true
   errorMessage.value = ''
   try {
-    const result = await AdminUsersAPI.batchCreateUsers(userList)
+    const result = await UserAPI.batchCreateUsers(userList)
     if (result && result.failed > 0) {
       errorMessage.value = `成功 ${result.success} 个，失败 ${result.failed} 个\n${(result.errors || []).join('\n')}`
     } else {
@@ -157,7 +157,7 @@ async function handleBatchCreate() {
 async function handleDeleteUser(userId) {
   if (!confirm('确定要删除该用户吗？')) return
   try {
-    await AdminUsersAPI.deleteUser(userId)
+    await UserAPI.deleteUser(userId)
     successMessage.value = '删除成功'
     loadUsers()
   } catch (e) {
@@ -172,7 +172,7 @@ async function handleBatchDelete() {
   }
   if (!confirm(`确定要删除选中的 ${selectedUserIds.value.length} 个用户吗？`)) return
   try {
-    const result = await AdminUsersAPI.batchDeleteUsers(selectedUserIds.value)
+    const result = await UserAPI.batchDeleteUsers(selectedUserIds.value)
     if (result && result.failed > 0) {
       errorMessage.value = `成功删除 ${result.success} 个，失败 ${result.failed} 个`
     } else {
