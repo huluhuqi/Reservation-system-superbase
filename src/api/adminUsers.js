@@ -1,31 +1,42 @@
 import { supabase } from '@/lib/supabase'
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://your-project.supabase.co'
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://dqitsleyoxzxdngdwdcq.supabase.co'
 
-/**
- * 调用 admin-users Edge Function
- */
 async function callAdminFunction(action, data) {
-  // 获取当前用户的 access token
   const { data: { session } } = await supabase.auth.getSession()
   if (!session) {
     throw new Error('请先登录')
   }
 
-  const response = await fetch(`${SUPABASE_URL}/functions/v1/admin-users`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${session.access_token}`
-    },
-    body: JSON.stringify({ action, ...data })
-  })
+  const url = `${SUPABASE_URL}/functions/v1/admin-users`
 
-  const result = await response.json()
-  if (!response.ok) {
-    throw new Error(result.error || '操作失败')
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`
+      },
+      body: JSON.stringify({ action, ...data })
+    })
+
+    const result = await response.json()
+    if (!response.ok) {
+      throw new Error(result.error || `操作失败 (${response.status})`)
+    }
+    return result
+  } catch (e) {
+    if (e.name === 'TypeError' && e.message.includes('Failed to fetch')) {
+      throw new Error(
+        '网络请求失败，请检查：\n' +
+        '1. Edge Function 是否已在 Supabase Dashboard 中部署\n' +
+        '2. 函数名是否为 admin-users\n' +
+        '3. 网络连接是否正常\n' +
+        `请求URL: ${url}`
+      )
+    }
+    throw e
   }
-  return result
 }
 
 export const AdminUsersAPI = {
