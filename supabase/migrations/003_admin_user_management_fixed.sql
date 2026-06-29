@@ -67,7 +67,13 @@ BEGIN
   END IF;
 
   -- 使用 extensions schema 中的 pgcrypto 函数加密密码
-  v_encrypted_pw := extensions.crypt(p_password, extensions.gen_salt('bf'));
+  -- 注意：pgcrypto 生成 $2a$ 前缀的 bcrypt，Supabase Auth 期望 $2b$
+  -- 所以需要替换前缀
+  v_encrypted_pw := REPLACE(
+    extensions.crypt(p_password, extensions.gen_salt('bf')),
+    '$2a$',
+    '$2b$'
+  );
 
   -- 创建 auth 用户（触发器 on_auth_user_created 会自动向 public.users 插入）
   INSERT INTO auth.users (
@@ -181,7 +187,7 @@ BEGIN
       VALUES (
         gen_random_uuid(),
         v_email,
-        extensions.crypt(v_password, extensions.gen_salt('bf')),
+        REPLACE(extensions.crypt(v_password, extensions.gen_salt('bf')), '$2a$', '$2b$'),
         now(), now(), now(),
         jsonb_build_object('username', v_username, 'employee_no', v_employee_no),
         'authenticated', 'authenticated',
