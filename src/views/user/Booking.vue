@@ -492,21 +492,21 @@ onMounted(async () => {
 
 <template>
   <div class="booking-page">
-    <div class="category-chips-section card-surface">
+    <div class="category-section card-surface">
       <div class="section-head">
         <h3>选择类别</h3>
       </div>
-      <div class="category-chips">
+      <div class="category-list">
         <button
           v-for="cat in categories"
           :key="cat.id"
-          class="category-chip"
+          class="category-card"
           :class="{ active: selectedCategoryId === cat.id }"
           type="button"
           @click="handleSelectCategory(cat)"
         >
-          <span class="chip-icon">{{ cat.category_icon || '📱' }}</span>
-          <span class="chip-text">{{ cat.category_name }}</span>
+          <div class="category-icon">{{ cat.category_icon || '📱' }}</div>
+          <div class="category-name">{{ cat.category_name }}</div>
         </button>
       </div>
     </div>
@@ -688,57 +688,52 @@ onMounted(async () => {
   cursor: pointer;
 }
 
-.category-chips {
+.category-list {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   overflow-x: auto;
   padding-bottom: 4px;
   -webkit-overflow-scrolling: touch;
 }
 
-.category-chips::-webkit-scrollbar {
+.category-list::-webkit-scrollbar {
   height: 4px;
 }
 
-.category-chips::-webkit-scrollbar-thumb {
+.category-list::-webkit-scrollbar-thumb {
   background: #d0d7e3;
   border-radius: 2px;
 }
 
-.category-chip {
+.category-card {
   flex-shrink: 0;
-  display: inline-flex;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 10px 18px;
+  gap: 8px;
+  padding: 16px 20px;
   background: #f7f9fd;
   border: 2px solid transparent;
-  border-radius: 20px;
+  border-radius: 12px;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-size: 14px;
 }
 
-.category-chip:hover {
+.category-card:hover {
+  border-color: #4a90e2;
+}
+
+.category-card.active {
   border-color: #4a90e2;
   background: #f0f6ff;
 }
 
-.category-chip.active {
-  border-color: #4a90e2;
-  background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
-  color: white;
+.category-icon {
+  font-size: 28px;
 }
 
-.category-chip.active .chip-text {
-  color: white;
-}
-
-.chip-icon {
-  font-size: 16px;
-}
-
-.chip-text {
+.category-name {
+  font-size: 13px;
   font-weight: 500;
   color: #1f2a44;
 }
