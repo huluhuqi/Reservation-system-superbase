@@ -1,10 +1,13 @@
 <script setup>
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { userApi } from '../../api/user.js'
-import { clearUser } from '../../api/context.js'
+import { UserAPI } from '@/api'
 
 const router = useRouter()
+
+function clearUser() {
+  localStorage.removeItem('user')
+}
 
 const loading = ref(false)
 const errorMessage = ref('')
@@ -43,14 +46,14 @@ async function changePassword() {
 
   loading.value = true
   try {
-    const settings = await userApi.getSettings()
+    const settings = await UserAPI.getSettings()
     const currentPwd = settings?.admin_password || 'admin123'
 
     if (form.value.oldPassword !== currentPwd) {
       throw new Error('当前密码不正确')
     }
 
-    await userApi.changeAdminPassword(form.value.newPassword)
+    await UserAPI.changeAdminPassword(form.value.newPassword)
 
     successMessage.value = '密码修改成功，请重新登录'
     form.value = { oldPassword: '', newPassword: '', confirmPassword: '' }

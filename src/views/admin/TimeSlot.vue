@@ -1,8 +1,6 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
-import { timeSlotApi } from '../../api/timeSlot.js'
-import { userApi } from '../../api/user.js'
-import { categoryApi } from '../../api/category.js'
+import { TimeSlotAPI, UserAPI, CategoryAPI } from '@/api'
 
 const loading = ref(false)
 const operating = ref(false)
@@ -24,7 +22,7 @@ const bookingOpenTime = ref('09:00')
 
 async function loadCategories() {
   try {
-    categories.value = await categoryApi.getCategories()
+    categories.value = await CategoryAPI.list()
   } catch (e) {
     console.error(e)
   }
@@ -33,7 +31,7 @@ async function loadCategories() {
 async function loadGlobalConfig() {
   loading.value = true
   try {
-    const settings = await userApi.getSettings()
+    const settings = await UserAPI.getSettings()
     customSlots.value = settings?.custom_slots || []
     bookingAdvanceDays.value = Number(settings?.booking_advance_days || 1)
     bookingOpenTime.value = settings?.booking_open_time || '09:00'
@@ -48,7 +46,7 @@ async function loadCategoryConfig() {
   if (!selectedCategoryId.value) return
   loading.value = true
   try {
-    const catSettings = await categoryApi.getCategorySettings(selectedCategoryId.value)
+    const catSettings = await CategoryAPI.getSettings(selectedCategoryId.value)
     customSlots.value = catSettings?.custom_slots || []
   } catch (e) {
     errorMessage.value = e.message || '加载类别配置失败'
@@ -81,8 +79,8 @@ async function saveSlots() {
   errorMessage.value = ''
   try {
     if (scope.value === 'global') {
-      await timeSlotApi.saveGlobalSlots(customSlots.value)
-      await userApi.saveSettings({
+      await UserAPI.saveSettings({
+        custom_slots: customSlots.value,
         booking_advance_days: String(bookingAdvanceDays.value),
         booking_open_time: bookingOpenTime.value
       })
@@ -90,7 +88,9 @@ async function saveSlots() {
       if (!selectedCategoryId.value) {
         throw new Error('请选择类别')
       }
-      await timeSlotApi.saveCategorySlots(selectedCategoryId.value, customSlots.value)
+      await CategoryAPI.saveSettings(selectedCategoryId.value, {
+        custom_slots: customSlots.value
+      })
     }
     successMessage.value = '保存成功'
     setTimeout(() => { successMessage.value = '' }, 2000)
@@ -148,7 +148,7 @@ onMounted(async () => {
         <label>选择类别</label>
         <select v-model="selectedCategoryId">
           <option value="">请选择类别</option>
-          <option v-for="cat in categories" :key="cat._id" :value="cat._id">{{ cat.category_name }}</option>
+          <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.category_name }}</option>
         </select>
       </div>
     </div>

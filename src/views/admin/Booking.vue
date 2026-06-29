@@ -1,8 +1,6 @@
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue'
-import { bookingApi } from '../../api/booking.js'
-import { instrumentApi } from '../../api/instrument.js'
-import { categoryApi } from '../../api/category.js'
+import { BookingAPI, InstrumentAPI, CategoryAPI } from '@/api'
 import { formatDate, getTodayDate } from '../../utils/date.js'
 
 const loading = ref(false)
@@ -23,7 +21,7 @@ const filteredInstruments = computed(() => {
 
 async function loadCategories() {
   try {
-    categories.value = await categoryApi.getCategories()
+    categories.value = await CategoryAPI.list()
   } catch (e) {
     console.error(e)
   }
@@ -31,7 +29,7 @@ async function loadCategories() {
 
 async function loadInstruments() {
   try {
-    instruments.value = await instrumentApi.getInstruments()
+    instruments.value = await InstrumentAPI.list()
   } catch (e) {
     console.error(e)
   }
@@ -41,11 +39,7 @@ async function loadBookings() {
   loading.value = true
   errorMessage.value = ''
   try {
-    const params = { date: selectedDate.value }
-    if (selectedCategoryId.value) {
-      params.category_id = selectedCategoryId.value
-    }
-    const records = await bookingApi.getBookings(params)
+    const records = await BookingAPI.getByDate(selectedDate.value, null, selectedCategoryId.value || null)
     bookingRecords.value = records.sort((a, b) => {
       const aKey = `${a.instrument_name || ''}_${a.slot_start || ''}`
       const bKey = `${b.instrument_name || ''}_${b.slot_start || ''}`
@@ -67,8 +61,8 @@ async function deleteBooking(record) {
   operating.value = true
   errorMessage.value = ''
   try {
-    const recordId = record._id
-    await bookingApi.deleteBooking(recordId)
+    const recordId = record.id
+    await BookingAPI.remove(recordId)
     successMessage.value = '已删除预约记录'
     await loadBookings()
     setTimeout(() => { successMessage.value = '' }, 2000)
@@ -98,7 +92,7 @@ onMounted(async () => {
         <label>选择类别</label>
         <select v-model="selectedCategoryId">
           <option value="">全部类别</option>
-          <option v-for="cat in categories" :key="cat._id" :value="cat._id">{{ cat.category_name }}</option>
+          <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.category_name }}</option>
         </select>
       </div>
       <div class="filter-item">
@@ -121,7 +115,7 @@ onMounted(async () => {
         暂无预约记录
       </div>
       <div v-else class="record-list">
-        <div v-for="record in bookingRecords" :key="record._id" class="record-row">
+        <div v-for="record in bookingRecords" :key="record.id" class="record-row">
           <div class="record-main">
             <div class="record-title">
               {{ record.instrument_name }} · {{ record.slot_start }} - {{ record.slot_end }}

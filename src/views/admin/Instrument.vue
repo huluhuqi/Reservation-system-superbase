@@ -1,7 +1,6 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import { instrumentApi } from '../../api/instrument.js'
-import { categoryApi } from '../../api/category.js'
+import { InstrumentAPI, CategoryAPI } from '@/api'
 
 const loading = ref(false)
 const operating = ref(false)
@@ -24,9 +23,9 @@ const filtered_instruments = computed(() => {
 
 async function loadCategories() {
   try {
-    categories.value = await categoryApi.getCategories()
+    categories.value = await CategoryAPI.list()
     if (categories.value.length > 0 && !form.value.category_id) {
-      form.value.category_id = categories.value[0]._id
+      form.value.category_id = categories.value[0].id
     }
   } catch (e) {
     console.error(e)
@@ -36,7 +35,7 @@ async function loadCategories() {
 async function loadInstruments() {
   loading.value = true
   try {
-    instruments.value = await instrumentApi.getInstruments()
+    instruments.value = await InstrumentAPI.list()
   } catch (e) {
     error_message.value = e.message || '加载仪器失败'
   } finally {
@@ -60,7 +59,7 @@ async function addInstrument() {
   operating.value = true
   error_message.value = ''
   try {
-    await instrumentApi.createInstrument({
+    await InstrumentAPI.create({
       instrument_name,
       category_id: category_id
     })
@@ -84,7 +83,7 @@ async function deleteInstrument(item) {
   operating.value = true
   error_message.value = ''
   try {
-    await instrumentApi.deleteInstrument(item._id)
+    await InstrumentAPI.remove(item.id)
     success_message.value = '删除仪器成功'
     await loadInstruments()
     setTimeout(() => { success_message.value = '' }, 2000)
@@ -98,7 +97,7 @@ async function deleteInstrument(item) {
 }
 
 function getCategoryName(category_id) {
-  const cat = categories.value.find(c => c._id === category_id)
+  const cat = categories.value.find(c => c.id === category_id)
   return cat?.category_name || '未知类别'
 }
 
@@ -116,7 +115,7 @@ onMounted(async () => {
         <div class="field-block">
           <label>所属类别</label>
           <select v-model="form.category_id">
-            <option v-for="cat in categories" :key="cat._id" :value="cat._id">{{ cat.category_name }}</option>
+            <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.category_name }}</option>
           </select>
         </div>
         <div class="field-block">
@@ -143,7 +142,7 @@ onMounted(async () => {
         <div class="filter-select">
           <select v-model="selected_category_id">
             <option value="">全部类别</option>
-            <option v-for="cat in categories" :key="cat._id" :value="cat._id">{{ cat.category_name }}</option>
+            <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.category_name }}</option>
           </select>
           <button class="secondary-btn" type="button" @click="loadInstruments">刷新</button>
         </div>
@@ -152,7 +151,7 @@ onMounted(async () => {
       <div v-if="loading" class="loading-text">加载中...</div>
       <div v-else-if="filtered_instruments.length === 0" class="empty-text">暂无仪器</div>
       <div v-else class="instrument-list">
-        <div v-for="item in filtered_instruments" :key="item._id" class="instrument-item">
+        <div v-for="item in filtered_instruments" :key="item.id" class="instrument-item">
           <div class="instrument-info">
             <div class="instrument-name">{{ item.instrument_name }}</div>
             <div class="instrument-category">{{ getCategoryName(item.category_id) }}</div>

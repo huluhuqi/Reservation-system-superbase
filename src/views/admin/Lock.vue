@@ -1,8 +1,6 @@
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue'
-import { timeSlotApi } from '../../api/timeSlot.js'
-import { categoryApi } from '../../api/category.js'
-import { instrumentApi } from '../../api/instrument.js'
+import { TimeSlotAPI, CategoryAPI, InstrumentAPI } from '@/api'
 import { formatDate, getTodayDate } from '../../utils/date.js'
 
 const loading = ref(false)
@@ -28,7 +26,7 @@ const filteredInstruments = computed(() => {
 
 async function loadCategories() {
   try {
-    categories.value = await categoryApi.getCategories()
+    categories.value = await CategoryAPI.list()
   } catch (e) {
     console.error(e)
   }
@@ -36,7 +34,7 @@ async function loadCategories() {
 
 async function loadInstruments() {
   try {
-    instruments.value = await instrumentApi.getInstruments()
+    instruments.value = await InstrumentAPI.list()
   } catch (e) {
     console.error(e)
   }
@@ -50,7 +48,7 @@ async function loadLocks() {
     if (selectedCategoryId.value) {
       params.category_id = selectedCategoryId.value
     }
-    locks.value = await timeSlotApi.getLocks(params)
+    locks.value = await TimeSlotAPI.getLocks(params)
   } catch (e) {
     errorMessage.value = e.message || '加载锁定记录失败'
   } finally {
@@ -67,7 +65,7 @@ async function addDayLock() {
   operating.value = true
   errorMessage.value = ''
   try {
-    await timeSlotApi.createLock({
+    await TimeSlotAPI.addLock({
       lock_type: 'day',
       lock_date: lockDate.value,
       instrument_id: selectedInstrumentId.value,
@@ -94,7 +92,7 @@ async function deleteLock(lock) {
   operating.value = true
   errorMessage.value = ''
   try {
-    await timeSlotApi.deleteLock(lock._id || lock.record_id)
+    await TimeSlotAPI.removeLock(lock.id)
     successMessage.value = '删除锁定成功'
     await loadLocks()
     setTimeout(() => { successMessage.value = '' }, 2000)
@@ -108,9 +106,9 @@ async function deleteLock(lock) {
 }
 
 function getLockTarget(lock) {
-  const inst = instruments.value.find(i => i._id === lock.instrument_id)
+  const inst = instruments.value.find(i => i.id === lock.instrument_id)
   if (inst) return inst.instrument_name
-  const cat = categories.value.find(c => c._id === lock.category_id)
+  const cat = categories.value.find(c => c.id === lock.category_id)
   if (cat) return cat.category_name + '（全部）'
   return '未知'
 }
@@ -153,14 +151,14 @@ onMounted(async () => {
           <label>选择类别</label>
           <select v-model="selectedCategoryId">
             <option value="">全部</option>
-            <option v-for="cat in categories" :key="cat._id" :value="cat._id">{{ cat.category_name }}</option>
+            <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.category_name }}</option>
           </select>
         </div>
         <div class="field-block">
           <label>选择仪器</label>
           <select v-model="selectedInstrumentId">
             <option value="">全部</option>
-            <option v-for="inst in filteredInstruments" :key="inst._id" :value="inst._id">{{ inst.instrument_name }}</option>
+            <option v-for="inst in filteredInstruments" :key="inst.id" :value="inst.id">{{ inst.instrument_name }}</option>
           </select>
         </div>
         <div class="field-block">
@@ -191,7 +189,7 @@ onMounted(async () => {
       <div v-if="loading" class="loading-text">加载中...</div>
       <div v-else-if="locks.length === 0" class="empty-text">暂无锁定记录</div>
       <div v-else class="lock-list">
-        <div v-for="lock in locks" :key="lock._id" class="lock-item">
+        <div v-for="lock in locks" :key="lock.id" class="lock-item">
           <div class="lock-info">
             <div class="lock-title">
               {{ getLockTarget(lock) }}

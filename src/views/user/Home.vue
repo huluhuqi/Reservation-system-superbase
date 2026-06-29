@@ -1,13 +1,17 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { instrumentApi } from '../../api/instrument.js'
-import { categoryApi } from '../../api/category.js'
-import { bookingApi } from '../../api/booking.js'
-import { timeSlotApi } from '../../api/timeSlot.js'
-import { userApi } from '../../api/user.js'
-import { getUser } from '../../api/context.js'
-import { formatDate, getTodayDate, getDateLabel, formatDateText } from '../../utils/date.js'
+import { CategoryAPI, InstrumentAPI, BookingAPI, TimeSlotAPI, UserAPI } from '@/api'
+import { getTodayDate, formatDateText } from '../../utils/date.js'
+
+function getUser() {
+  try {
+    const raw = localStorage.getItem('user')
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
 
 const router = useRouter()
 const loading = ref(false)
@@ -21,7 +25,7 @@ const userInfo = computed(() => getUser())
 
 const overviewList = computed(() => {
   return instruments.value.slice(0, 4).map((item) => {
-    const status = availabilityMap.value[item._id] || {
+    const status = availabilityMap.value[item.id] || {
       status: 'free',
       label: '可用',
       freeCount: 0,
@@ -36,7 +40,7 @@ const overviewList = computed(() => {
 
 async function loadCategories() {
   try {
-    categories.value = await categoryApi.getCategories()
+    categories.value = await CategoryAPI.list()
   } catch (e) {
     console.error('加载类别失败', e)
   }
@@ -56,9 +60,7 @@ function handleBackToCategorySelection() {
 async function loadInstruments() {
   if (!selectedCategory.value) return
   try {
-    instruments.value = await instrumentApi.getInstruments({
-      category_id: selectedCategory.value._id
-    })
+    instruments.value = await InstrumentAPI.list(selectedCategory.value.id)
   } catch (e) {
     console.error('加载仪器失败', e)
   }
@@ -73,8 +75,8 @@ async function loadAvailability() {
   try {
     const today = getTodayDate()
     const [bookings, locks] = await Promise.all([
-      bookingApi.getBookingsByDate(today, null, selectedCategory.value?._id),
-      timeSlotApi.getLocks({ date: today, category_id: selectedCategory.value?._id })
+      BookingAPI.getByDate(today, null, selectedCategory.value?.id),
+      TimeSlotAPI.getLocks({ lock_date: today, category_id: selectedCategory.value?.id })
     ])
 
     const slots = systemSettings.value?.custom_slots || []
@@ -82,8 +84,8 @@ async function loadAvailability() {
     const nextMap = {}
 
     for (const instrument of instruments.value) {
-      const instBookings = bookings.filter(b => b.instrument_id === instrument._id)
-      const instLocks = locks.filter(l => l.instrument_id === instrument._id)
+      const instBookings = bookings.filter(b => b.instrument_id === instrument.id)
+      const instLocks = locks.filter(l => l.instrument_id === instrument.id)
       const bookingSet = new Set(instBookings.map(b => b.slot_start))
       const dayLock = instLocks.some(l => l.lock_type === 'day' && l.lock_date === today)
       const slotLockSet = new Set(
@@ -117,7 +119,7 @@ async function loadAvailability() {
         note = `剩余 ${freeCount}/${totalCount}`
       }
 
-      nextMap[instrument._id] = {
+      nextMap[instrument.id] = {
         status,
         label,
         note,
@@ -139,7 +141,7 @@ function handleGoToBooking() {
 onMounted(async () => {
   loading.value = true
   try {
-    systemSettings.value = await userApi.getSettings()
+    systemSettings.value = await UserAPI.getSettings()
     await loadCategories()
   } catch (e) {
     console.error(e)
@@ -179,9 +181,9 @@ onMounted(async () => {
       <div class="category-grid">
         <button
           v-for="cat in categories"
-          :key="cat._id"
+          :key="cat.id"
           class="category-card"
-          :class="{ active: selectedCategory?._id === cat._id }"
+          :class="{ active: selectedCategory?.id === cat.id }"
           type="button"
           @click="handleSelectCategory(cat)"
         >
@@ -205,7 +207,7 @@ onMounted(async () => {
         暂无仪器数据
       </div>
 
-      <div v-for="item in overviewList" :key="item._id" class="overview-row">
+      <div v-for="item in overviewList" :key="item.id" class="overview-row">
         <div class="thumb" :class="item.status"></div>
         <div class="overview-main">
           <div class="overview-title">{{ item.instrument_name }}</div>

@@ -1,9 +1,6 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import { userApi } from '../../api/user.js'
-import { instrumentApi } from '../../api/instrument.js'
-import { bookingApi } from '../../api/booking.js'
-import { categoryApi } from '../../api/category.js'
+import { UserAPI, InstrumentAPI, BookingAPI, CategoryAPI } from '@/api'
 import { formatDate, getTodayDate } from '../../utils/date.js'
 
 const loading = ref(true)
@@ -18,17 +15,18 @@ const recentBookings = ref([])
 
 async function loadStats() {
   try {
-    const [settings, categories, instruments, todayBookings] = await Promise.all([
-      userApi.getSettings({ __init__: true }),
-      categoryApi.getCategories({ __init__: true }),
-      instrumentApi.getInstruments({ __init__: true }),
-      bookingApi.getBookingsByDate(getTodayDate(), null, null, { __init__: true })
+    const [settings, categories, instruments, todayBookings, users] = await Promise.all([
+      UserAPI.getSettings(),
+      CategoryAPI.list(),
+      InstrumentAPI.list(),
+      BookingAPI.getByDate(getTodayDate()),
+      UserAPI.listUsers()
     ])
 
     stats.value = {
       totalInstruments: instruments.length,
       totalCategories: categories.length,
-      totalUsers: settings?.user_list?.length || 0,
+      totalUsers: users.length,
       todayBookings: todayBookings.length
     }
 
@@ -83,7 +81,7 @@ onMounted(() => {
           今日暂无预约
         </div>
         <div v-else class="booking-list">
-          <div v-for="item in recentBookings" :key="item._id" class="booking-item">
+          <div v-for="item in recentBookings" :key="item.id" class="booking-item">
             <div class="booking-info">
               <div class="booking-title">{{ item.instrument_name }}</div>
               <div class="booking-sub">

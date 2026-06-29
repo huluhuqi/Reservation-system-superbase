@@ -1,6 +1,6 @@
-# KG7500 仪器预约管理系统
+# 科研仪器预约系统
 
-一个基于 Vue 3 + Vite 开发的仪器预约管理前端应用，后端使用 YesApi（果创云）提供数据存储与接口服务。
+一个基于 Vue 3 + Vite + Supabase 开发的科研仪器预约管理系统，支持用户预约、管理员后台、时段锁定等功能。
 
 ---
 
@@ -9,19 +9,18 @@
 ### 用户端
 - **类别选择**：按仪器类别浏览可预约设备
 - **时段预约**：选择日期和时段进行预约，支持多选批量预约
-- **白名单校验**：预约时校验姓名与工号是否在管理员注册的用户名单中
-- **预约规则**：支持预约开放天数、每日开放预约时间等灵活配置
+- **预约规则**：支持预约开放天数等灵活配置
 - **我的预约**：查看已提交的预约记录，支持取消预约
-- **实时可用概览**：展示各仪器的实时可用状态（可用 / 部分可用 / 已满 / 锁定）
+- **实时可用概览**：展示各仪器的实时可用状态
 
 ### 管理员端
-- **类别管理**：新增、删除仪器类别
-- **仪器管理**：按类别新增、删除仪器
-- **用户管理**：单条 / 批量新增用户，支持批量删除
-- **时间段管理**：按类别自定义可预约时间段（无默认时段，需手动配置）
+- **类别管理**：新增、编辑、删除仪器类别
+- **仪器管理**：按类别新增、编辑、删除仪器
+- **用户管理**：查看所有注册用户
+- **时间段管理**：按类别自定义可预约时间段
 - **锁定管理**：按仪器或类别锁定特定日期或时段
-- **预约设置**：配置预约开放天数、每日开放预约时间
-- **预约记录**：查看所有用户的预约记录，支持批量删除
+- **预约设置**：配置预约开放天数
+- **预约记录**：查看所有用户的预约记录，支持状态管理
 - **密码管理**：修改管理员登录密码
 
 ---
@@ -32,7 +31,8 @@
 |------|------|------|
 | Vue | 3.5.17 | 前端框架 |
 | Vite | 5.4.19 | 构建工具 |
-| YesApi | - | 后端云数据库与 API |
+| Vue Router | 4.6.4 | 路由管理 |
+| Supabase | - | 后端云数据库与 Auth 认证 |
 
 ---
 
@@ -40,16 +40,24 @@
 
 ```
 .
-├── public/              # 静态资源
 ├── src/
-│   ├── api.js           # YesApi 接口适配层（签名、字段映射、CRUD 封装）
-│   ├── App.vue          # 主应用组件（含所有页面逻辑与模板）
-│   ├── main.js          # 入口文件
-│   └── style.css        # 全局样式（如存在）
-├── index.html
-├── package.json
-├── vite.config.js
-└── README.md
+│   ├── api/             # 数据访问层（基于 Supabase）
+│   ├── lib/             # 公共库（Supabase 客户端）
+│   ├── layout/          # 布局组件
+│   ├── views/           # 页面组件
+│   │   ├── user/        # 用户端页面
+│   │   └── admin/       # 管理员端页面
+│   ├── router/          # 路由配置
+│   ├── permission/      # 路由权限守卫
+│   ├── utils/           # 工具函数
+│   ├── App.vue          # 根组件
+│   └── main.js          # 入口文件
+├── supabase/
+│   └── migrations/      # 数据库迁移脚本
+├── .env.development     # 开发环境变量
+├── .env.production      # 生产环境变量
+├── vite.config.js       # Vite 配置
+└── package.json
 ```
 
 ---
@@ -60,7 +68,7 @@
 
 ```bash
 git clone <仓库地址>
-cd kg7500-frontend
+cd Reservation-system-main
 ```
 
 ### 2. 安装依赖
@@ -69,16 +77,20 @@ cd kg7500-frontend
 npm install
 ```
 
-### 3. 配置 YesApi
+### 3. 配置 Supabase
 
-编辑 `src/api.js`，替换为你的 YesApi 应用配置：
+编辑 `.env.development` 和 `.env.production`，填入你的 Supabase 配置：
 
-```javascript
-const APP_KEY = '你的AppKey'
-const API_HOST = 'https://api.yesapi.net'
+```env
+VITE_SUPABASE_URL=https://your-project.supabase.co
+VITE_SUPABASE_ANON_KEY=your-anon-key
 ```
 
-### 4. 本地开发
+### 4. 初始化数据库
+
+在 Supabase Dashboard → SQL Editor 中执行 `supabase/migrations/001_initial_schema.sql`。
+
+### 5. 本地开发
 
 ```bash
 npm run dev
@@ -86,7 +98,7 @@ npm run dev
 
 默认在 `http://localhost:5173` 启动。
 
-### 5. 构建
+### 6. 构建
 
 ```bash
 npm run build
@@ -96,115 +108,43 @@ npm run build
 
 ---
 
-## 后端数据表配置（YesApi）
+## 数据库表结构
 
-在 YesApi 后台依次创建以下 6 个数据表单，并添加对应字段：
+系统包含以下数据表：
 
-### 1. `kg7500_settings`（全局设置）
+| 表名 | 说明 |
+|------|------|
+| `users` | 用户表（关联 auth.users） |
+| `category` | 仪器类别 |
+| `instrument` | 仪器设备 |
+| `time_slot` | 预约时段 |
+| `booking` | 预约记录 |
+| `lock` | 时段锁定 |
+| `settings` | 系统设置 |
 
-| 字段名 | 类型 | 说明 |
-|--------|------|------|
-| `admin_password` | 字符串 | 管理员密码 |
-| `custom_slots` | 字符串(文本) | JSON，默认时间段数组 |
-| `booking_advance_days` | 整数 | 可提前预约天数，默认 1 |
-| `booking_open_time` | 字符串 | 每日开放预约时间，默认 `17:00` |
-| `user_list` | 字符串(文本) | JSON，注册用户列表 |
-
-### 2. `kg7500_categories`（仪器类别）
-
-| 字段名 | 类型 | 说明 |
-|--------|------|------|
-| `category_name` | 字符串 | 类别名称 |
-| `category_icon` | 字符串 | 类别图标 |
-
-### 3. `kg7500_category_settings`（类别设置）
-
-| 字段名 | 类型 | 说明 |
-|--------|------|------|
-| `category_id` | 字符串 | 关联类别 ID |
-| `custom_slots` | 字符串(文本) | JSON，该类别自定义时间段 |
-
-### 4. `kg7500_instruments`（仪器）
-
-| 字段名 | 类型 | 说明 |
-|--------|------|------|
-| `instrument_name` | 字符串 | 仪器名称 |
-| `remark` | 字符串 | 备注 |
-| `category_id` | 字符串 | 所属类别 ID |
-
-### 5. `kg7500_bookings`（预约记录）
-
-| 字段名 | 类型 | 说明 |
-|--------|------|------|
-| `category_id` | 字符串 | 类别 ID |
-| `instrument_id` | 字符串 | 仪器 ID |
-| `booking_date` | 字符串 | 预约日期（如 `2026-06-25`） |
-| `slot_start` | 字符串 | 开始时间（如 `09:00`） |
-| `slot_end` | 字符串 | 结束时间（如 `10:00`） |
-| `slot_index` | 整数 | 时段序号 |
-| `user_name` | 字符串 | 预约人姓名 |
-| `employee_no` | 字符串 | 工号 |
-| `created_by` | 字符串 | 创建者设备 ID |
-| `created_by_name` | 字符串 | 创建者姓名 |
-| `booking_remark` | 字符串 | 预约备注 |
-
-### 6. `kg7500_locks`（锁定记录）
-
-| 字段名 | 类型 | 说明 |
-|--------|------|------|
-| `category_id` | 字符串 | 类别 ID |
-| `instrument_id` | 字符串 | 仪器 ID |
-| `scope_type` | 字符串 | 锁定范围 |
-| `lock_type` | 字符串 | 锁定类型（day / slot） |
-| `lock_date` | 字符串 | 锁定日期 |
-| `start_date` | 字符串 | 开始日期 |
-| `lock_reason` | 字符串 | 锁定原因 |
+所有表均启用 **行级安全（RLS）** 并强制 RLS，确保数据安全。
 
 ---
 
 ## 部署
 
-本项目已配置 `gh-pages`，可一键部署到 GitHub Pages：
+### GitHub Pages 部署
 
-```bash
-npm run deploy
-```
+项目已配置 GitHub Actions 自动部署，推送到 `main` 分支即可自动构建并部署。
 
-部署前请确保 `vite.config.js` 中的 `base` 路径与 GitHub 仓库名一致：
-
-```javascript
-export default defineConfig({
-  base: '/你的仓库名/',
-  plugins: [vue()]
-})
-```
+**注意事项：**
+1. 确保 `vite.config.js` 中的 `base` 路径与 GitHub 仓库名一致
+2. 配置 `.env.production` 中的生产环境变量
+3. 在 GitHub 仓库 Settings → Pages 中选择 `gh-pages` 分支
 
 ---
 
-## 使用说明
+## 默认账号
 
-### 首次使用
-1. 访问应用后，点击右下角"管理员入口"
-2. 使用默认密码 `admin123` 登录
-3. 在"预约设置"中配置开放天数与开放时间
-4. 在"类别管理"中新增仪器类别
-5. 在"仪器管理"中为类别添加仪器
-6. 在"时间段管理"中为类别配置可预约时段
-7. 在"用户管理"中导入允许预约的用户名单
+- **管理员邮箱**：admin@admin.com
+- **管理员密码**：admin123
 
-### 用户预约流程
-1. 选择仪器类别
-2. 选择仪器与日期
-3. 填写姓名与工号（需已加入白名单）
-4. 选择时段并确认预约
-
----
-
-## 注意事项
-
-- YesApi 的 `App.Table.Create` / `Update` / `Delete` 等写操作在 `api.js` 中已自动改为 POST 提交，避免用户数据过多时 URL 超长导致 `Failed to fetch`。
-- 各仪器类别的时间段相互独立，未配置时段的类别在用户端不会显示任何可预约时间段。
-- 实时可用概览始终按**当天**日期统计，与用户在预约界面选择的日期无关。
+注册 `admin@admin.com` 邮箱的账号会自动获得管理员权限。
 
 ---
 

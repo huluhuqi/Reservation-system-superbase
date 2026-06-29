@@ -1,132 +1,55 @@
-import { safePost } from './safeRequest.js'
-import { getUserId, getUserRole } from './context.js'
+import { supabase } from '@/lib/supabase'
 
-const TABLE = 'kg7500_instruments'
-const APP_KEY = '4418E8F40E3E27D3EBFD592311539A89'
-
-function normalizeRecord(record) {
-  if (!record) return record
-  const result = { ...record }
-  if (result.id !== undefined && result._id === undefined) {
-    result._id = String(result.id)
-  }
-  return result
-}
-
-function denormalizeData(data) {
-  const cleaned = { ...data }
-  delete cleaned._id
-  delete cleaned.id
-  delete cleaned.add_time
-  delete cleaned.update_time
-  delete cleaned.uuid
-  delete cleaned.ext_data
-  return cleaned
-}
-
-export const instrumentApi = {
-  async getInstruments(params = {}) {
-    const conditions = []
-    if (params.category_id) {
-      conditions.push(['category_id', '=', String(params.category_id)])
-    }
-    if (params.keyword) {
-      conditions.push(['name', 'like', `%${params.keyword}%`])
-    }
-
-    const whereClause = conditions.length > 0 ? conditions : [['id', '>', '0']]
-
-    const payload = {
-      s: 'App.Table.FreeQuery',
-      app_key: APP_KEY,
-      user_id: getUserId(),
-      role: getUserRole(),
-      model_name: TABLE,
-      logic: 'and',
-      where: JSON.stringify(whereClause),
-      page: params.page || 1,
-      perpage: params.perpage || 500
-    }
-
-    const res = await safePost('/', payload, { skipRisk: true })
-    const list = res.list || []
-    return list.map(normalizeRecord)
+export const InstrumentAPI = {
+  list: async (categoryId) => {
+    let query = supabase.from('instrument').select('*')
+    if (categoryId) query = query.eq('category_id', categoryId)
+    const { data, error } = await query
+    if (error) throw error
+    return (data || []).map(item => ({
+      ...item,
+      instrument_name: item.name
+    }))
   },
 
-  async getInstrumentById(id) {
-    if (!id) return null
-
-    const payload = {
-      s: 'App.Table.Get',
-      app_key: APP_KEY,
-      user_id: getUserId(),
-      role: getUserRole(),
-      model_name: TABLE,
-      id
+  create: async (payload) => {
+    const insertData = {
+      name: payload.name || payload.instrument_name,
+      category_id: payload.category_id,
+      description: payload.description,
+      status: payload.status || 'active',
+      location: payload.location
     }
-
-    const res = await safePost('/', payload, { skipRisk: true })
-    return res.data ? normalizeRecord(res.data) : null
+    const { data, error } = await supabase
+      .from('instrument')
+      .insert(insertData)
+      .select()
+      .single()
+    if (error) throw error
+    return { ...data, instrument_name: data.name }
   },
 
-  async addInstrument(data) {
-    const createData = denormalizeData(data)
+  update: async (id, payload) => {
+    const updateData = {}
+    if (payload.name !== undefined) updateData.name = payload.name
+    if (payload.instrument_name !== undefined) updateData.name = payload.instrument_name
+    if (payload.category_id !== undefined) updateData.category_id = payload.category_id
+    if (payload.description !== undefined) updateData.description = payload.description
+    if (payload.status !== undefined) updateData.status = payload.status
+    if (payload.location !== undefined) updateData.location = payload.location
 
-    const payload = {
-      s: 'App.Table.Create',
-      app_key: APP_KEY,
-      user_id: getUserId(),
-      role: getUserRole(),
-      model_name: TABLE,
-      data: JSON.stringify(createData),
-      __admin: true
-    }
-
-    const res = await safePost('/', payload)
-    const newId = res.id
-
-    if (newId) {
-      return await this.getInstrumentById(newId)
-    }
-    return normalizeRecord(data)
+    const { data, error } = await supabase
+      .from('instrument')
+      .update(updateData)
+      .eq('id', id)
+      .select()
+      .single()
+    if (error) throw error
+    return { ...data, instrument_name: data.name }
   },
 
-  async updateInstrument(id, data) {
-    const updateData = denormalizeData(data)
-
-    const payload = {
-      s: 'App.Table.Update',
-      app_key: APP_KEY,
-      user_id: getUserId(),
-      role: getUserRole(),
-      model_name: TABLE,
-      id,
-      data: JSON.stringify(updateData),
-      __admin: true
-    }
-
-    await safePost('/', payload)
-    return await this.getInstrumentById(id)
-  },
-
-  async deleteInstrument(id) {
-    const payload = {
-      s: 'App.Table.Delete',
-      app_key: APP_KEY,
-      user_id: getUserId(),
-      role: getUserRole(),
-      model_name: TABLE,
-      id,
-      __admin: true
-    }
-
-    await safePost('/', payload)
-    return { success: true }
-  },
-
-  async createInstrument(data) {
-    return this.addInstrument(data)
+  remove: async (id) => {
+    const { error } = await supabase.from('instrument').delete().eq('id', id)
+    if (error) throw error
   }
 }
-
-export default instrumentApi

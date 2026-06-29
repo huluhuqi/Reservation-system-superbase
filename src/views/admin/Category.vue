@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { categoryApi } from '../../api/category.js'
+import { CategoryAPI } from '@/api'
 
 const loading = ref(false)
 const operating = ref(false)
@@ -16,7 +16,7 @@ const form = ref({
 async function loadCategories() {
   loading.value = true
   try {
-    categories.value = await categoryApi.getCategories()
+    categories.value = await CategoryAPI.list()
   } catch (e) {
     errorMessage.value = e.message || '加载类别失败'
   } finally {
@@ -34,7 +34,7 @@ async function addCategory() {
   operating.value = true
   errorMessage.value = ''
   try {
-    await categoryApi.createCategory({
+    await CategoryAPI.create({
       category_name,
       category_icon: form.value.category_icon.trim()
     })
@@ -61,7 +61,7 @@ async function deleteCategory(item) {
   operating.value = true
   errorMessage.value = ''
   try {
-    await categoryApi.deleteCategory(item._id)
+    await CategoryAPI.remove(item.id)
     successMessage.value = '删除类别成功'
     await loadCategories()
     setTimeout(() => { successMessage.value = '' }, 2000)
@@ -110,7 +110,7 @@ onMounted(() => {
       <div v-if="loading" class="loading-text">加载中...</div>
       <div v-else-if="categories.length === 0" class="empty-text">暂无类别</div>
       <div v-else class="category-list">
-        <div v-for="item in categories" :key="item._id" class="category-item">
+        <div v-for="item in categories" :key="item.id" class="category-item">
           <div class="category-info">
             <span class="category-icon">{{ item.category_icon || '📱' }}</span>
             <span class="category-name">{{ item.category_name }}</span>

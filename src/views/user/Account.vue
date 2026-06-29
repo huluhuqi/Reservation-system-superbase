@@ -1,12 +1,24 @@
 <script setup>
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { getUser, clearUser, isAdmin as checkIsAdmin } from '../../api/context.js'
+import { supabase } from '@/lib/supabase'
 
 const router = useRouter()
 
+function getUser() {
+  try {
+    const raw = localStorage.getItem('user')
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
+
 const userInfo = computed(() => getUser())
-const isAdmin = computed(() => checkIsAdmin())
+const isAdmin = computed(() => {
+  const user = getUser()
+  return user && user.role === 'admin'
+})
 
 const menuItems = [
   { icon: '📋', label: '我的预约', path: '/home/records' },
@@ -14,8 +26,13 @@ const menuItems = [
   { icon: '⚙️', label: '设置', path: '/home/account' }
 ]
 
-function handleLogout() {
-  clearUser()
+async function handleLogout() {
+  try {
+    await supabase.auth.signOut()
+  } catch (e) {
+    console.error('登出Supabase失败', e)
+  }
+  localStorage.removeItem('user')
   router.push('/login')
 }
 

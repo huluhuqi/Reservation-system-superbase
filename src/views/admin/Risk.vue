@@ -1,7 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import { userApi } from '../../api/user.js'
-import { bookingApi } from '../../api/booking.js'
+import { UserAPI, BookingAPI } from '@/api'
 
 const loading = ref(false)
 const errorMessage = ref('')
@@ -23,20 +22,20 @@ async function loadRiskData() {
   errorMessage.value = ''
   try {
     const [users, bookings] = await Promise.all([
-      userApi.getRegisteredUsers(),
-      bookingApi.getBookings({})
+      UserAPI.listUsers(),
+      BookingAPI.list()
     ])
 
     const userBookingCount = {}
     for (const b of bookings) {
-      const key = `${b.user_name}-${b.employee_no}`
+      const key = b.user_id
       userBookingCount[key] = (userBookingCount[key] || 0) + 1
     }
 
     const highRiskUsers = users
       .map(u => ({
         ...u,
-        bookingCount: userBookingCount[`${u.user_name}-${u.employee_no}`] || 0
+        bookingCount: userBookingCount[u.id] || 0
       }))
       .filter(u => u.bookingCount >= 10)
       .sort((a, b) => b.bookingCount - a.bookingCount)
@@ -103,11 +102,11 @@ onMounted(() => {
         暂无高风险用户
       </div>
       <div v-else class="risk-list">
-        <div v-for="(user, index) in riskStats.highRiskUsers" :key="`${user.user_name}-${user.employee_no}`" class="risk-item">
+        <div v-for="(user, index) in riskStats.highRiskUsers" :key="user.id" class="risk-item">
           <div class="rank">{{ index + 1 }}</div>
           <div class="user-info">
-            <div class="user-name">{{ user.user_name }}</div>
-            <div class="user-no">工号：{{ user.employee_no }}</div>
+            <div class="user-name">{{ user.username || user.email }}</div>
+            <div class="user-no">{{ user.email }}</div>
           </div>
           <div class="booking-count">
             <span class="count-value">{{ user.bookingCount }}</span>

@@ -1,12 +1,16 @@
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue'
-import { getUser, buildUserKey } from '../../api/context.js'
-import { instrumentApi } from '../../api/instrument.js'
-import { categoryApi } from '../../api/category.js'
-import { bookingApi } from '../../api/booking.js'
-import { timeSlotApi } from '../../api/timeSlot.js'
-import { userApi } from '../../api/user.js'
+import { CategoryAPI, InstrumentAPI, BookingAPI, TimeSlotAPI, UserAPI } from '@/api'
 import { formatDate, getTodayDate, getDateLabel, formatDateText } from '../../utils/date.js'
+
+function getUser() {
+  try {
+    const raw = localStorage.getItem('user')
+    return raw ? JSON.parse(raw) : null
+  } catch {
+    return null
+  }
+}
 
 const loading = ref(false)
 const operating = ref(false)
@@ -31,12 +35,6 @@ const categoryCustomSlots = ref([])
 const remark = ref('')
 
 const userInfo = computed(() => getUser())
-const userKey = computed(() => {
-  if (userInfo.value) {
-    return buildUserKey(userInfo.value.user_name, userInfo.value.employee_no)
-  }
-  return ''
-})
 
 const quickDateOptions = computed(() => {
   const maxAdvanceDays = Number(systemSettings.value?.booking_advance_days || 1)
@@ -72,7 +70,7 @@ function normalizeSlots(rawSlots) {
 }
 
 const selectedInstrument = computed(() =>
-  instruments.value.find((item) => item._id === selectedInstrumentId.value) || null
+  instruments.value.find((item) => item.id === selectedInstrumentId.value) || null
 )
 
 const selectedInstrumentName = computed(() => selectedInstrument.value?.instrument_name || '')
@@ -135,19 +133,19 @@ function getSlotPersonName(slot) {
 
 async function loadCategories() {
   try {
-    categories.value = await categoryApi.getCategories()
+    categories.value = await CategoryAPI.list()
   } catch (e) {
     console.error('加载类别失败', e)
   }
 }
 
 async function handleSelectCategory(category) {
-  selectedCategoryId.value = category._id
+  selectedCategoryId.value = category.id
   selectedCategoryName.value = category.category_name
   showCategorySelection.value = false
 
   try {
-    const catSettings = await categoryApi.getCategorySettings(category._id)
+    const catSettings = await CategoryAPI.getSettings(category.id)
     categoryCustomSlots.value = catSettings?.custom_slots || []
   } catch (e) {
     categoryCustomSlots.value = []
@@ -170,11 +168,9 @@ function handleBackToCategorySelection() {
 async function loadInstruments() {
   if (!selectedCategoryId.value) return
   try {
-    instruments.value = await instrumentApi.getInstruments({
-      category_id: selectedCategoryId.value
-    })
+    instruments.value = await InstrumentAPI.list(selectedCategoryId.value)
     if (instruments.value.length > 0) {
-      selectedInstrumentId.value = instruments.value[0]._id
+      selectedInstrumentId.value = instruments.value[0].id
     }
   } catch (e) {
     console.error('加载仪器失败', e)
@@ -193,14 +189,14 @@ async function loadAvailability() {
   try {
     const today = getTodayDate()
     const [bookings, locks] = await Promise.all([
-      bookingApi.getBookingsByDate(today, null, selectedCategoryId.value),
-      timeSlotApi.getLocks({ date: today, category_id: selectedCategoryId.value })
+      BookingAPI.getByDate(today, null, selectedCategoryId.value),
+      TimeSlotAPI.getLocks({ lock_date: today, category_id: selectedCategoryId.value })
     ])
 
     const nextMap = {}
     for (const instrument of instruments.value) {
-      const instBookings = bookings.filter(b => b.instrument_id === instrument._id)
-      const instLocks = locks.filter(l => l.instrument_id === instrument._id)
+      const instBookings = bookings.filter(b => b.instrument_id === instrument.id)
+      const instLocks = locks.filter(l => l.instrument_id === instrument.id)
       const bookingSet = new Set(instBookings.map(b => b.slot_start))
       const dayLock = instLocks.some(l => l.lock_type === 'day' && l.lock_date === today)
       const slotLockSet = new Set(instLocks.filter(l => l.lock_type === 'slot').map(l => l.slot_index))
@@ -220,7 +216,7 @@ async function loadAvailability() {
       else if (freeCount === 0) { status = 'busy'; label = '已满' }
       else if (freeCount < totalCount) { status = 'partial'; label = '部分可用' }
 
-      nextMap[instrument._id] = { status, label, freeCount, totalCount }
+      nextMap[instrument.id] = { status, label, freeCount, totalCount }
     }
 
     availabilityMap.value = nextMap
@@ -250,8 +246,8 @@ async function loadSlots() {
     }))
 
     const [bookings, locks] = await Promise.all([
-      bookingApi.getBookingsByDate(selectedDate.value, selectedInstrumentId.value, selectedCategoryId.value),
-      timeSlotApi.getLocks({ date: selectedDate.value, instrument_id: selectedInstrumentId.value, category_id: selectedCategoryId.value })
+      BookingAPI.getByDate(selectedDate.value, selectedInstrumentId.value, selectedCategoryId.value),
+      TimeSlotAPI.getLocks({ lock_date: selectedDate.value, instrument_id: selectedInstrumentId.value, category_id: selectedCategoryId.value })
     ])
 
     const dayLock = locks.some(l => l.lock_type === 'day' && (l.lock_date === selectedDate.value || l.scope_type === 'long_term'))
@@ -266,15 +262,14 @@ async function loadSlots() {
 
       const matchedBooking = bookings.find((item) => item.slot_start === slot.slot_start)
       if (matchedBooking) {
-        const isMine = matchedBooking.user_key === userKey.value
+        const isMine = matchedBooking.user_id === userInfo.value?.id
         return {
           ...slot,
-          booking_id: matchedBooking._id || matchedBooking.record_id,
-          record_id: matchedBooking.record_id || matchedBooking._id,
-          user_key: matchedBooking.user_key || '',
+          booking_id: matchedBooking.id,
+          record_id: matchedBooking.id,
           user_name: matchedBooking.user_name || '',
           employee_no: matchedBooking.employee_no || '',
-          remark: matchedBooking.remark || '',
+          remark: matchedBooking.booking_remark || '',
           status: isMine ? 'mine' : 'booked',
           text: isMine ? '我的预约' : '已占用'
         }
@@ -298,42 +293,34 @@ async function handleReserveSelectedSlots() {
   resetMessages()
 
   try {
-    const registeredUsers = systemSettings.value?.user_list || []
-    const isWhitelisted = registeredUsers.some(
-      (u) => u.user_name === userInfo.value?.user_name && u.employee_no === userInfo.value?.employee_no
-    )
-
-    if (!isWhitelisted) {
-      errorMessage.value = '预约失败：该姓名与工号未注册，请联系管理员添加'
-      return
-    }
-
-    let createCount = 0
-    const existingBookings = await bookingApi.getBookingsByDate(
+    const existingBookings = await BookingAPI.getByDate(
       selectedDate.value, selectedInstrumentId.value, selectedCategoryId.value
     )
 
-    for (const slot of selectedSlotsForOperation.value) {
-      const existed = existingBookings.find((item) => item.slot_start === slot.slot_start)
-      if (existed) continue
+    const existingSlotStarts = new Set(existingBookings.map(b => b.slot_start))
+    const slotsToCreate = selectedSlotsForOperation.value.filter(
+      slot => !existingSlotStarts.has(slot.slot_start)
+    )
 
-      await bookingApi.createBooking({
-        booking_date: selectedDate.value,
-        instrument_id: selectedInstrumentId.value,
-        instrument_name: selectedInstrumentName.value,
-        slot_start: slot.slot_start,
-        slot_end: slot.slot_end,
-        slot_index: slot.slot_index,
-        user_name: userInfo.value.user_name,
-        employee_no: userInfo.value.employee_no,
-        booking_remark: remark.value,
-        user_key: userKey.value,
-        category_id: selectedCategoryId.value
-      })
-      createCount += 1
+    if (slotsToCreate.length === 0) {
+      errorMessage.value = '所选时段已被预约，请重新选择'
+      return
     }
 
-    successMessage.value = `预约成功：已预约 ${createCount} 个时段。`
+    const bookingsData = slotsToCreate.map(slot => ({
+      booking_date: selectedDate.value,
+      instrument_id: selectedInstrumentId.value,
+      instrument_name: selectedInstrumentName.value,
+      slot_start: slot.slot_start,
+      slot_end: slot.slot_end,
+      slot_index: slot.slot_index,
+      booking_remark: remark.value,
+      category_id: selectedCategoryId.value
+    }))
+
+    const results = await BookingAPI.createBatch(bookingsData)
+
+    successMessage.value = `预约成功：已预约 ${results.length} 个时段。`
     await loadSlots()
     await loadAvailability()
   } catch (e) {
@@ -355,18 +342,18 @@ async function handleCancelSelectedSlots() {
   resetMessages()
 
   try {
-    const existingBookings = await bookingApi.getBookingsByDate(
+    const existingBookings = await BookingAPI.getByDate(
       selectedDate.value, selectedInstrumentId.value, selectedCategoryId.value
     )
 
+    const currentUserId = userInfo.value?.id
     let cancelledCount = 0
     for (const slot of selectedSlotsForOperation.value) {
       const existed = existingBookings.find((item) => item.slot_start === slot.slot_start)
-      if (!existed || existed.user_key !== userKey.value) continue
+      if (!existed || existed.user_id !== currentUserId) continue
 
-      const recordId = existed.record_id || existed._id
-      if (recordId) {
-        await bookingApi.deleteBooking(recordId)
+      if (existed.id) {
+        await BookingAPI.remove(existed.id)
         cancelledCount += 1
       }
     }
@@ -393,7 +380,7 @@ watch([selectedDate, selectedInstrumentId], async () => {
 onMounted(async () => {
   loading.value = true
   try {
-    systemSettings.value = await userApi.getSettings()
+    systemSettings.value = await UserAPI.getSettings()
     await loadCategories()
   } catch (e) {
     console.error(e)
@@ -413,7 +400,7 @@ onMounted(async () => {
       <div class="category-list">
         <button
           v-for="cat in categories"
-          :key="cat._id"
+          :key="cat.id"
           class="category-card"
           type="button"
           @click="handleSelectCategory(cat)"
@@ -431,7 +418,7 @@ onMounted(async () => {
           <button class="ghost-btn" type="button" @click="handleBackToCategorySelection">返回选择</button>
         </div>
         <div class="category-selected-info">
-          <span class="category-icon">{{ categories.find(c => c._id === selectedCategoryId)?.category_icon || '📱' }}</span>
+          <span class="category-icon">{{ categories.find(c => c.id === selectedCategoryId)?.category_icon || '📱' }}</span>
           <span class="category-name">{{ selectedCategoryName }}</span>
         </div>
       </div>
@@ -446,16 +433,16 @@ onMounted(async () => {
         <div v-else class="instrument-list">
           <button
             v-for="item in instruments"
-            :key="item._id"
+            :key="item.id"
             class="instrument-card"
-            :class="{ active: selectedInstrumentId === item._id }"
+            :class="{ active: selectedInstrumentId === item.id }"
             type="button"
-            @click="selectedInstrumentId = item._id"
+            @click="selectedInstrumentId = item.id"
           >
             <div class="instrument-name">{{ item.instrument_name }}</div>
             <div class="instrument-state">
-              <span class="status-dot" :class="availabilityMap[item._id]?.status || 'free'"></span>
-              {{ availabilityMap[item._id]?.label || '可用' }}
+              <span class="status-dot" :class="availabilityMap[item.id]?.status || 'free'"></span>
+              {{ availabilityMap[item.id]?.label || '可用' }}
             </div>
           </button>
         </div>
