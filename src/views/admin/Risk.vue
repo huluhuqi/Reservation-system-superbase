@@ -12,8 +12,8 @@ const riskStats = ref({
 })
 
 const riskRules = ref([
-  { id: 1, name: '单日预约次数限制', value: 5, enabled: true },
-  { id: 2, name: '取消预约次数限制', value: 3, enabled: true },
+  { id: 1, name: '单日预约次数限制', value: 20, enabled: true },
+  { id: 2, name: '取消预约次数限制', value: 20, enabled: true },
   { id: 3, name: '预约超时提醒', value: 30, enabled: true, unit: '分钟' }
 ])
 
