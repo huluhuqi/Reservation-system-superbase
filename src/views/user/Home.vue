@@ -24,7 +24,7 @@ const systemSettings = ref(null)
 const userInfo = computed(() => getUser())
 
 const overviewList = computed(() => {
-  return instruments.value.slice(0, 4).map((item) => {
+  return instruments.value.map((item) => {
     const status = availabilityMap.value[item.id] || {
       status: 'free',
       label: '可用',
@@ -52,11 +52,6 @@ async function handleSelectCategory(category) {
   await loadAvailability()
 }
 
-function handleBackToCategorySelection() {
-  selectedCategory.value = null
-  instruments.value = []
-}
-
 async function loadInstruments() {
   if (!selectedCategory.value) return
   try {
@@ -72,6 +67,26 @@ async function loadAvailability() {
     return
   }
 
+  let slotsToUse = systemSettings.value?.custom_slots || []
+  if (slotsToUse.length === 0) {
+    slotsToUse = [
+      { slot_start: '09:00', slot_end: '10:00' },
+      { slot_start: '10:00', slot_end: '11:00' },
+      { slot_start: '11:00', slot_end: '12:00' },
+      { slot_start: '13:00', slot_end: '14:00' },
+      { slot_start: '14:00', slot_end: '15:00' },
+      { slot_start: '15:00', slot_end: '16:00' },
+      { slot_start: '16:00', slot_end: '17:00' },
+      { slot_start: '17:00', slot_end: '18:00' }
+    ]
+  }
+
+  const totalCount = slotsToUse.length
+  if (totalCount === 0) {
+    availabilityMap.value = {}
+    return
+  }
+
   try {
     const today = getTodayDate()
     const [bookings, locks] = await Promise.all([
@@ -79,8 +94,6 @@ async function loadAvailability() {
       TimeSlotAPI.getLocks({ lock_date: today, category_id: selectedCategory.value?.id })
     ])
 
-    const slots = systemSettings.value?.custom_slots || []
-    const totalCount = slots.length
     const nextMap = {}
 
     for (const instrument of instruments.value) {
@@ -94,7 +107,7 @@ async function loadAvailability() {
 
       let freeCount = 0
       for (let i = 0; i < totalCount; i++) {
-        const slot = slots[i]
+        const slot = slotsToUse[i]
         if (dayLock || slotLockSet.has(i) || bookingSet.has(slot?.slot_start)) {
           continue
         }
@@ -103,26 +116,21 @@ async function loadAvailability() {
 
       let status = 'free'
       let label = '可用'
-      let note = '当前空闲'
 
       if (dayLock) {
         status = 'busy'
         label = '锁定'
-        note = '当天锁定'
       } else if (freeCount === 0) {
         status = 'busy'
         label = '已满'
-        note = '暂无可约'
       } else if (freeCount < totalCount) {
         status = 'partial'
         label = '部分可用'
-        note = `剩余 ${freeCount}/${totalCount}`
       }
 
       nextMap[instrument.id] = {
         status,
         label,
-        note,
         freeCount,
         totalCount
       }
@@ -135,7 +143,9 @@ async function loadAvailability() {
 }
 
 function handleGoToBooking() {
-  router.push('/home/booking')
+  if (selectedCategory.value) {
+    router.push('/home/booking')
+  }
 }
 
 onMounted(async () => {
@@ -143,6 +153,9 @@ onMounted(async () => {
   try {
     systemSettings.value = await UserAPI.getSettings()
     await loadCategories()
+    if (categories.value.length > 0) {
+      await handleSelectCategory(categories.value[0])
+    }
   } catch (e) {
     console.error(e)
   } finally {
@@ -153,155 +166,174 @@ onMounted(async () => {
 
 <template>
   <div class="home-page">
-    <div class="hero-card card-surface">
-      <div class="hero-greeting">
-        <div class="greeting-text">
-          <h2>你好，{{ userInfo?.user_name || '同学' }} 👋</h2>
-          <p>欢迎使用科研仪器预约系统</p>
-        </div>
-      </div>
-
-      <div class="quick-actions">
-        <button class="action-btn primary" type="button" @click="handleGoToBooking">
-          <span class="action-icon">📅</span>
-          <span>立即预约</span>
-        </button>
-        <button class="action-btn" type="button" @click="$router.push('/home/records')">
-          <span class="action-icon">📋</span>
-          <span>我的记录</span>
-        </button>
-      </div>
+    <div class="hero-card">
+      <h1 class="hero-title">科研仪器预约系统</h1>
+      <p class="hero-subtitle" v-if="selectedCategory">{{ selectedCategory.category_name }} 设备预约</p>
     </div>
 
     <div class="category-section card-surface">
       <div class="section-head">
         <h3>选择仪器类别</h3>
-        <span class="mini-tip">点击查看详情</span>
+        <span class="section-tip">左右滑动查看更多</span>
       </div>
-      <div class="category-grid">
-        <button
-          v-for="cat in categories"
-          :key="cat.id"
-          class="category-card"
-          :class="{ active: selectedCategory?.id === cat.id }"
-          type="button"
-          @click="handleSelectCategory(cat)"
-        >
-          <div class="category-icon">{{ cat.category_icon || '📱' }}</div>
-          <div class="category-name">{{ cat.category_name }}</div>
-        </button>
+      <div class="category-scroll">
+        <div class="category-track">
+          <button
+            v-for="cat in categories"
+            :key="cat.id"
+            class="category-card"
+            :class="{ active: selectedCategory?.id === cat.id }"
+            type="button"
+            @click="handleSelectCategory(cat)"
+          >
+            <div class="category-icon-wrap">
+              <span class="category-icon">{{ cat.category_icon || '📱' }}</span>
+            </div>
+            <div class="category-name">{{ cat.category_name }}</div>
+          </button>
+        </div>
       </div>
     </div>
 
-    <div v-if="selectedCategory" class="overview-card card-surface">
+    <div class="overview-section card-surface">
       <div class="section-head">
-        <h3>{{ selectedCategory.category_name }} - 实时可用概览</h3>
-        <span class="overview-time">按 {{ formatDateText(getTodayDate()) }} 统计</span>
+        <h3>实时可用概览</h3>
+        <span class="section-date">按 {{ formatDateText(getTodayDate()) }} 统计</span>
       </div>
-
-      <button class="back-btn" type="button" @click="handleBackToCategorySelection">
-        ← 返回类别选择
-      </button>
 
       <div v-if="overviewList.length === 0" class="empty-text">
         暂无仪器数据
       </div>
 
-      <div v-for="item in overviewList" :key="item.id" class="overview-row">
-        <div class="thumb" :class="item.status"></div>
-        <div class="overview-main">
-          <div class="overview-title">{{ item.instrument_name }}</div>
-          <div class="overview-sub">
-            <span class="status-dot" :class="item.status"></span>
-            {{ item.label }}
+      <div v-else class="overview-list">
+        <div
+          v-for="item in overviewList"
+          :key="item.id"
+          class="overview-row"
+          @click="handleGoToBooking"
+        >
+          <div class="overview-thumb">
+            <span class="thumb-icon">{{ selectedCategory?.category_icon || '📱' }}</span>
+          </div>
+          <div class="overview-main">
+            <div class="overview-title">{{ item.instrument_name }}</div>
+            <div class="overview-sub">
+              <span class="status-dot" :class="item.status"></span>
+              {{ item.label }}
+            </div>
+          </div>
+          <div class="overview-progress">
+            <div class="progress-bar">
+              <div
+                class="progress-fill"
+                :class="item.status"
+                :style="{ width: (item.freeCount / item.totalCount * 100) + '%' }"
+              ></div>
+            </div>
+          </div>
+          <div class="overview-count">
+            {{ item.freeCount }}/{{ item.totalCount }}
           </div>
         </div>
-        <div class="overview-count">{{ item.freeCount }}/{{ item.totalCount }}</div>
       </div>
     </div>
 
-    <div v-else class="overview-card card-surface">
-      <div class="section-head">
-        <h3>系统提示</h3>
-      </div>
-      <p class="tip-text">请先选择仪器类别，查看实时可用情况</p>
+    <div class="bottom-actions">
+      <button class="book-btn" type="button" @click="handleGoToBooking" :disabled="!selectedCategory">
+        立即预约
+      </button>
     </div>
   </div>
 </template>
 
 <style scoped>
 .home-page {
-  padding-bottom: 20px;
+  padding: 16px 16px 100px;
+  background: linear-gradient(180deg, #e8f0ff 0%, #f5f7fa 300px);
+  min-height: 100vh;
 }
 
 .hero-card {
-  background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
-  color: white;
+  padding: 20px 4px 16px;
 }
 
-.hero-card h2 {
-  margin: 0 0 4px;
-  font-size: 20px;
-}
-
-.hero-card p {
+.hero-title {
   margin: 0;
-  opacity: 0.9;
-  font-size: 14px;
+  font-size: 26px;
+  font-weight: 700;
+  color: #1a2a4a;
 }
 
-.quick-actions {
-  display: flex;
-  gap: 12px;
-  margin-top: 20px;
+.hero-subtitle {
+  margin: 6px 0 0;
+  font-size: 15px;
+  color: #6b7a99;
 }
 
-.action-btn {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  padding: 16px 12px;
-  background: rgba(255, 255, 255, 0.2);
-  border: none;
-  border-radius: 12px;
-  color: white;
-  cursor: pointer;
-  transition: all 0.2s ease;
+.card-surface {
+  background: rgba(255, 255, 255, 0.9);
   backdrop-filter: blur(10px);
+  border-radius: 20px;
+  padding: 18px;
+  box-shadow: 0 4px 20px rgba(31, 42, 68, 0.06);
+  margin-bottom: 16px;
 }
 
-.action-btn.primary {
-  background: white;
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.section-head h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #1a2a4a;
+}
+
+.section-tip {
+  font-size: 13px;
   color: #4a90e2;
 }
 
-.action-icon {
-  font-size: 24px;
+.section-date {
+  font-size: 13px;
+  color: #4a90e2;
+  font-weight: 500;
 }
 
-.category-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
+.category-scroll {
+  overflow-x: auto;
+  margin: 0 -18px;
+  padding: 0 18px;
+  scrollbar-width: none;
+}
+
+.category-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.category-track {
+  display: flex;
+  gap: 14px;
+  padding-bottom: 4px;
 }
 
 .category-card {
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 16px 8px;
+  gap: 10px;
+  padding: 16px 20px;
   background: #f7f9fd;
   border: 2px solid transparent;
-  border-radius: 12px;
+  border-radius: 16px;
   cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.category-card:hover {
-  background: #eef3fb;
+  transition: all 0.25s ease;
+  min-width: 100px;
 }
 
 .category-card.active {
@@ -309,120 +341,131 @@ onMounted(async () => {
   background: #f0f6ff;
 }
 
+.category-icon-wrap {
+  width: 64px;
+  height: 64px;
+  background: white;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
 .category-icon {
-  font-size: 28px;
+  font-size: 32px;
 }
 
 .category-name {
-  font-size: 13px;
-  color: #1f2a44;
-  font-weight: 500;
-}
-
-.section-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 14px;
-}
-
-.section-head h3 {
-  margin: 0;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
+  color: #1f2a44;
 }
 
-.mini-tip {
-  font-size: 12px;
-  color: #8a9ab5;
-}
-
-.overview-time {
-  font-size: 12px;
-  color: #8a9ab5;
-}
-
-.back-btn {
-  background: none;
-  border: none;
-  color: #4a90e2;
-  font-size: 13px;
-  cursor: pointer;
-  padding: 0 0 12px;
+.overview-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
 }
 
 .overview-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 0;
+  gap: 14px;
+  padding: 14px 0;
   border-bottom: 1px solid #f0f2f7;
+  cursor: pointer;
+  transition: background 0.2s;
 }
 
 .overview-row:last-child {
   border-bottom: none;
 }
 
-.thumb {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
+.overview-row:active {
+  background: #f7f9fd;
+  margin: 0 -10px;
+  padding-left: 10px;
+  padding-right: 10px;
+  border-radius: 10px;
+}
+
+.overview-thumb {
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(135deg, #ffe8cc 0%, #ffd4a3 100%);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
 }
 
-.thumb.free {
-  background: #27ae60;
-}
-
-.thumb.partial {
-  background: #f39c12;
-}
-
-.thumb.busy {
-  background: #95a5a6;
+.thumb-icon {
+  font-size: 24px;
 }
 
 .overview-main {
   flex: 1;
+  min-width: 0;
 }
 
 .overview-title {
-  font-size: 14px;
-  font-weight: 500;
-  color: #1f2a44;
+  font-size: 17px;
+  font-weight: 600;
+  color: #1a2a4a;
+  margin-bottom: 4px;
 }
 
 .overview-sub {
-  font-size: 12px;
+  font-size: 13px;
   color: #6b7a99;
-  margin-top: 2px;
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
 .status-dot {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
+  display: inline-block;
 }
 
-.status-dot.free {
-  background: #27ae60;
+.status-dot.free { background: #27ae60; }
+.status-dot.partial { background: #f39c12; }
+.status-dot.busy { background: #95a5a6; }
+
+.overview-progress {
+  width: 100px;
+  flex-shrink: 0;
+  margin: 0 12px;
 }
 
-.status-dot.partial {
-  background: #f39c12;
+.progress-bar {
+  height: 8px;
+  background: #eef2f7;
+  border-radius: 4px;
+  overflow: hidden;
 }
 
-.status-dot.busy {
-  background: #95a5a6;
+.progress-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
 }
+
+.progress-fill.free { background: linear-gradient(90deg, #27ae60, #2ecc71); }
+.progress-fill.partial { background: linear-gradient(90deg, #f39c12, #f1c40f); }
+.progress-fill.busy { background: linear-gradient(90deg, #95a5a6, #bdc3c7); }
 
 .overview-count {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 700;
   color: #4a90e2;
+  flex-shrink: 0;
+  min-width: 50px;
+  text-align: right;
 }
 
 .empty-text {
@@ -432,9 +475,34 @@ onMounted(async () => {
   font-size: 14px;
 }
 
-.tip-text {
-  color: #6b7a99;
-  font-size: 14px;
-  margin: 0;
+.bottom-actions {
+  position: fixed;
+  bottom: 70px;
+  left: 16px;
+  right: 16px;
+  z-index: 50;
+}
+
+.book-btn {
+  width: 100%;
+  padding: 16px;
+  background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+  color: white;
+  border: none;
+  border-radius: 14px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(74, 144, 226, 0.35);
+  transition: all 0.2s;
+}
+
+.book-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.book-btn:active:not(:disabled) {
+  transform: scale(0.98);
 }
 </style>
