@@ -20,7 +20,6 @@ const successMessage = ref('')
 const categories = ref([])
 const selectedCategoryId = ref('')
 const selectedCategoryName = ref('')
-const showCategorySelection = ref(true)
 
 const instruments = ref([])
 const selectedInstrumentId = ref('')
@@ -143,7 +142,6 @@ async function loadCategories() {
 async function handleSelectCategory(category) {
   selectedCategoryId.value = category.id
   selectedCategoryName.value = category.category_name
-  showCategorySelection.value = false
 
   try {
     const catSettings = await CategoryAPI.getSettings(category.id)
@@ -153,18 +151,7 @@ async function handleSelectCategory(category) {
   }
 
   await loadInstruments()
-  // 确保仪器加载完成后刷新可用性预览
   await loadAvailability()
-}
-
-function handleBackToCategorySelection() {
-  showCategorySelection.value = true
-  selectedCategoryId.value = ''
-  selectedCategoryName.value = ''
-  selectedInstrumentId.value = ''
-  categoryCustomSlots.value = []
-  instruments.value = []
-  slots.value = []
 }
 
 async function loadInstruments() {
@@ -180,20 +167,17 @@ async function loadInstruments() {
 }
 
 async function loadAvailability() {
-  // 如果没有加载完仪器，等待一下
   if (!selectedCategoryId.value || instruments.value.length === 0) {
     availabilityMap.value = {}
     return
   }
 
-  // 如果没有自定义时段，使用系统默认时段
   let slotsToUse = customSlots.value
   if (!slotsToUse || slotsToUse.length === 0) {
     const systemSlots = systemSettings.value?.custom_slots
     slotsToUse = systemSlots && systemSlots.length > 0 ? systemSlots : null
   }
   if (!slotsToUse || slotsToUse.length === 0) {
-    // 如果系统设置也没有，使用基础时段
     slotsToUse = [
       { slot_start: '09:00', slot_end: '10:00' },
       { slot_start: '10:00', slot_end: '11:00' },
@@ -213,7 +197,6 @@ async function loadAvailability() {
   }
 
   try {
-    // 使用当前选择的日期（而非固定今天），确保预览与选择日期一致
     const checkDate = selectedDate.value || getTodayDate()
     const [bookings, locks] = await Promise.all([
       BookingAPI.getByDate(checkDate, null, selectedCategoryId.value),
@@ -263,7 +246,6 @@ async function loadSlots() {
   resetMessages()
   handleClearSelectedSlots()
 
-  // ===== 日期有效性检查 =====
   const maxAdvanceDays = Number(systemSettings.value?.booking_advance_days || 7)
   const bookingOpenTime = systemSettings.value?.booking_open_time || '09:00'
   const now = new Date()
@@ -278,10 +260,8 @@ async function loadSlots() {
   const currentMinutes = now.getHours() * 60 + now.getMinutes()
   const openMinutes = openHour * 60 + openMinute
 
-  // 可预约天数固定为 maxAdvanceDays 天（包括今天）
   const maxAllowedDayDiff = maxAdvanceDays - 1
 
-  // 如果选择的日期超出可预约范围，提示并返回
   if (dayDiff > maxAllowedDayDiff) {
     errorMessage.value = `仅可预约 ${maxAdvanceDays} 天内的日期`
     slots.value = []
@@ -289,7 +269,6 @@ async function loadSlots() {
     return
   }
 
-  // 如果选择的是历史日期，提示并返回
   if (dayDiff < 0) {
     errorMessage.value = '不能预约历史日期'
     slots.value = []
@@ -325,18 +304,15 @@ async function loadSlots() {
       if (dayLock) return { ...slot, status: 'locked', text: '整天锁定' }
       if (slotLockMap[slot.slot_index]) return { ...slot, status: 'locked', text: '时段锁定' }
 
-      // ===== 检查开放预约时间 =====
       if (isToday) {
         const slotHour = parseInt(slot.slot_start.split(':')[0])
         const slotMinute = parseInt(slot.slot_start.split(':')[1])
         const slotMinutes = slotHour * 60 + slotMinute
 
-        // 未到开放时间：所有时段显示"未到开放时间"
         if (isBeforeOpenTime) {
           return { ...slot, status: 'expired', text: '未到开放时间' }
         }
 
-        // 已过开放时间：已过的时段标记为过期
         if (currentMinutes >= slotMinutes) {
           return { ...slot, status: 'expired', text: '已过期' }
         }
@@ -371,7 +347,6 @@ async function handleReserveSelectedSlots() {
     return
   }
 
-  // ===== 提交前再次验证日期有效性 =====
   const maxAdvanceDays = Number(systemSettings.value?.booking_advance_days || 7)
   const bookingOpenTime = systemSettings.value?.booking_open_time || '09:00'
   const now = new Date()
@@ -406,7 +381,6 @@ async function handleReserveSelectedSlots() {
   resetMessages()
 
   try {
-    // 检查是否有已过期的时段被选中
     const expiredSlots = selectedSlotsForOperation.value.filter(slot => slot.status === 'expired')
     if (expiredSlots.length > 0) {
       errorMessage.value = '所选时段中包含已过期的时段，请重新选择'
@@ -493,7 +467,6 @@ watch([selectedDate, selectedInstrumentId], async () => {
   if (selectedInstrumentId.value) {
     await loadSlots()
   }
-  // 只有仪器列表有数据时才加载可用性预览
   if (instruments.value.length > 0) {
     await loadAvailability()
   }
@@ -504,6 +477,10 @@ onMounted(async () => {
   try {
     systemSettings.value = await UserAPI.getSettings()
     await loadCategories()
+    
+    if (categories.value.length > 0) {
+      await handleSelectCategory(categories.value[0])
+    }
   } catch (e) {
     console.error(e)
     errorMessage.value = e.message || '初始化失败'
@@ -515,180 +492,168 @@ onMounted(async () => {
 
 <template>
   <div class="booking-page">
-    <div v-if="showCategorySelection" class="category-selection card-surface">
+    <div class="category-chips-section card-surface">
       <div class="section-head">
-        <h3>选择仪器类别</h3>
+        <h3>选择类别</h3>
       </div>
-      <div class="category-list">
+      <div class="category-chips">
         <button
           v-for="cat in categories"
           :key="cat.id"
-          class="category-card"
+          class="category-chip"
+          :class="{ active: selectedCategoryId === cat.id }"
           type="button"
           @click="handleSelectCategory(cat)"
         >
-          <div class="category-icon">{{ cat.category_icon || '📱' }}</div>
-          <div class="category-name">{{ cat.category_name }}</div>
+          <span class="chip-icon">{{ cat.category_icon || '📱' }}</span>
+          <span class="chip-text">{{ cat.category_name }}</span>
         </button>
       </div>
     </div>
 
-    <template v-else>
-      <div class="category-summary card-surface compact-card">
-        <div class="section-head">
-          <h3>已选类别</h3>
-          <button class="ghost-btn" type="button" @click="handleBackToCategorySelection">返回选择</button>
-        </div>
-        <div class="category-selected-info">
-          <span class="category-icon">{{ categories.find(c => c.id === selectedCategoryId)?.category_icon || '📱' }}</span>
-          <span class="category-name">{{ selectedCategoryName }}</span>
-        </div>
+    <div class="card-surface availability-card">
+      <div class="section-head">
+        <h3>实时可用预览</h3>
+        <span class="mini-tip">按 {{ formatDateText(selectedDate) }} 统计</span>
       </div>
-
-      <div class="card-surface availability-card">
-        <div class="section-head">
-          <h3>实时可用预览</h3>
-          <span class="mini-tip">按 {{ formatDateText(selectedDate) }} 统计</span>
-        </div>
-        <div v-if="instruments.length === 0" class="empty-text">
-          暂无仪器数据
-        </div>
-        <div v-else class="availability-list">
-          <div v-for="item in instruments" :key="item.id" class="availability-row">
-            <div class="avail-thumb" :class="availabilityMap[item.id]?.status || 'free'"></div>
-            <div class="avail-main">
-              <div class="avail-title">{{ item.instrument_name }}</div>
-              <div class="avail-sub">
-                <span class="status-dot" :class="availabilityMap[item.id]?.status || 'free'"></span>
-                {{ availabilityMap[item.id]?.label || '可用' }}
-              </div>
-            </div>
-            <div class="avail-count">
-              {{ availabilityMap[item.id]?.freeCount ?? 0 }}/{{ availabilityMap[item.id]?.totalCount ?? 0 }}
-            </div>
-          </div>
-        </div>
+      <div v-if="instruments.length === 0" class="empty-text">
+        暂无仪器数据
       </div>
-
-      <div class="card-surface choose-card">
-        <div class="section-head">
-          <h3>选择仪器</h3>
-        </div>
-        <div v-if="instruments.length === 0" class="empty-text">
-          暂无仪器
-        </div>
-        <div v-else class="instrument-list">
-          <button
-            v-for="item in instruments"
-            :key="item.id"
-            class="instrument-card"
-            :class="{ active: selectedInstrumentId === item.id }"
-            type="button"
-            @click="selectedInstrumentId = item.id"
-          >
-            <div class="instrument-name">{{ item.instrument_name }}</div>
-            <div class="instrument-state">
+      <div v-else class="availability-list">
+        <div v-for="item in instruments" :key="item.id" class="availability-row">
+          <div class="avail-thumb" :class="availabilityMap[item.id]?.status || 'free'"></div>
+          <div class="avail-main">
+            <div class="avail-title">{{ item.instrument_name }}</div>
+            <div class="avail-sub">
               <span class="status-dot" :class="availabilityMap[item.id]?.status || 'free'"></span>
               {{ availabilityMap[item.id]?.label || '可用' }}
             </div>
-          </button>
+          </div>
+          <div class="avail-count">
+            {{ availabilityMap[item.id]?.freeCount ?? 0 }}/{{ availabilityMap[item.id]?.totalCount ?? 0 }}
+          </div>
         </div>
       </div>
+    </div>
 
-      <div class="card-surface choose-card">
-        <div class="section-head">
-          <h3>选择日期</h3>
-          <input v-model="selectedDate" class="date-inline" type="date" />
-        </div>
-        <div class="date-grid">
-          <button
-            v-for="item in quickDateOptions"
-            :key="item.key"
-            class="date-chip"
-            :class="{ active: selectedDate === item.value }"
-            type="button"
-            @click="selectedDate = item.value"
-          >
-            <div class="chip-title">{{ item.title }}</div>
-            <div class="chip-date">{{ item.monthDay }}</div>
-            <div class="chip-week">{{ item.weekday }}</div>
-          </button>
-        </div>
+    <div class="card-surface choose-card">
+      <div class="section-head">
+        <h3>选择仪器</h3>
+      </div>
+      <div v-if="instruments.length === 0" class="empty-text">
+        暂无仪器
+      </div>
+      <div v-else class="instrument-list">
+        <button
+          v-for="item in instruments"
+          :key="item.id"
+          class="instrument-card"
+          :class="{ active: selectedInstrumentId === item.id }"
+          type="button"
+          @click="selectedInstrumentId = item.id"
+        >
+          <div class="instrument-name">{{ item.instrument_name }}</div>
+          <div class="instrument-state">
+            <span class="status-dot" :class="availabilityMap[item.id]?.status || 'free'"></span>
+            {{ availabilityMap[item.id]?.label || '可用' }}
+          </div>
+        </button>
+      </div>
+    </div>
+
+    <div class="card-surface choose-card">
+      <div class="section-head">
+        <h3>选择日期</h3>
+        <input v-model="selectedDate" class="date-inline" type="date" />
+      </div>
+      <div class="date-grid">
+        <button
+          v-for="item in quickDateOptions"
+          :key="item.key"
+          class="date-chip"
+          :class="{ active: selectedDate === item.value }"
+          type="button"
+          @click="selectedDate = item.value"
+        >
+          <div class="chip-title">{{ item.title }}</div>
+          <div class="chip-date">{{ item.monthDay }}</div>
+          <div class="chip-week">{{ item.weekday }}</div>
+        </button>
+      </div>
+    </div>
+
+    <div class="card-surface choose-card">
+      <div class="section-head">
+        <h3>选择时间段</h3>
+        <span class="mini-tip">{{ formatDateText(selectedDate) }}</span>
+      </div>
+      <div class="legend-row">
+        <span><i class="legend-dot available"></i>可预约</span>
+        <span><i class="legend-dot mine"></i>我的预约</span>
+        <span><i class="legend-dot booked"></i>已占用</span>
+        <span><i class="legend-dot locked"></i>不可预约</span>
       </div>
 
-      <div class="card-surface choose-card">
-        <div class="section-head">
-          <h3>选择时间段</h3>
-          <span class="mini-tip">{{ formatDateText(selectedDate) }}</span>
-        </div>
-        <div class="legend-row">
-          <span><i class="legend-dot available"></i>可预约</span>
-          <span><i class="legend-dot mine"></i>我的预约</span>
-          <span><i class="legend-dot booked"></i>已占用</span>
-          <span><i class="legend-dot locked"></i>不可预约</span>
-        </div>
+      <p v-if="loading" class="notice loading">正在加载时段数据...</p>
+      <p v-if="errorMessage" class="notice error">{{ errorMessage }}</p>
+      <p v-if="successMessage" class="notice success">{{ successMessage }}</p>
 
-        <p v-if="loading" class="notice loading">正在加载时段数据...</p>
-        <p v-if="errorMessage" class="notice error">{{ errorMessage }}</p>
-        <p v-if="successMessage" class="notice success">{{ successMessage }}</p>
+      <div v-if="customSlots.length === 0" class="empty-text">
+        暂无时段配置
+      </div>
+      <div v-else class="slot-list">
+        <button
+          v-for="slot in slots"
+          :key="slot.slot_start"
+          class="slot-row"
+          :class="[slot.status, { selected: isSelected(slot) }]"
+          type="button"
+          @click="handleSlotClick(slot)"
+        >
+          <span class="slot-time">{{ slot.slot_start }}--{{ slot.slot_end }}</span>
+          <span class="slot-status">{{ slot.text }}</span>
+          <span v-if="getSlotPersonName(slot)" class="slot-person">{{ getSlotPersonName(slot) }}</span>
+        </button>
+      </div>
+    </div>
 
-        <div v-if="customSlots.length === 0" class="empty-text">
-          暂无时段配置
-        </div>
-        <div v-else class="slot-list">
-          <button
-            v-for="slot in slots"
-            :key="slot.slot_start"
-            class="slot-row"
-            :class="[slot.status, { selected: isSelected(slot) }]"
-            type="button"
-            @click="handleSlotClick(slot)"
-          >
-            <span class="slot-time">{{ slot.slot_start }}--{{ slot.slot_end }}</span>
-            <span class="slot-status">{{ slot.text }}</span>
-            <span v-if="getSlotPersonName(slot)" class="slot-person">{{ getSlotPersonName(slot) }}</span>
-          </button>
-        </div>
+    <div class="card-surface confirm-card">
+      <div class="section-head"><h3>备注（选填）</h3></div>
+      <textarea
+        v-model="remark"
+        rows="2"
+        maxlength="50"
+        placeholder="如：实验项目名称、用途等"
+        class="remark-input"
+      ></textarea>
+
+      <div class="confirm-info">
+        <div>用户：{{ bookingSummary.user_name }}</div>
+        <div>仪器：{{ bookingSummary.instrument_name }}</div>
+        <div>日期：{{ bookingSummary.date }}</div>
+        <div>时段：{{ bookingSummary.slots }}</div>
       </div>
 
-      <div class="card-surface confirm-card">
-        <div class="section-head"><h3>备注（选填）</h3></div>
-        <textarea
-          v-model="remark"
-          rows="2"
-          maxlength="50"
-          placeholder="如：实验项目名称、用途等"
-          class="remark-input"
-        ></textarea>
-
-        <div class="confirm-info">
-          <div>用户：{{ bookingSummary.user_name }}</div>
-          <div>仪器：{{ bookingSummary.instrument_name }}</div>
-          <div>日期：{{ bookingSummary.date }}</div>
-          <div>时段：{{ bookingSummary.slots }}</div>
-        </div>
-
-        <div class="confirm-actions">
-          <button class="secondary-btn" type="button" @click="handleClearSelectedSlots">清空选择</button>
-          <button
-            class="secondary-btn warning"
-            type="button"
-            @click="handleCancelSelectedSlots"
-            :disabled="operating || selectedSlotsForOperation.length === 0"
-          >
-            {{ operating ? '处理中...' : '取消预约' }}
-          </button>
-          <button
-            class="primary-btn"
-            type="button"
-            @click="handleReserveSelectedSlots"
-            :disabled="operating"
-          >
-            {{ operating ? '处理中...' : '确认预约' }}
-          </button>
-        </div>
+      <div class="confirm-actions">
+        <button class="secondary-btn" type="button" @click="handleClearSelectedSlots">清空选择</button>
+        <button
+          class="secondary-btn warning"
+          type="button"
+          @click="handleCancelSelectedSlots"
+          :disabled="operating || selectedSlotsForOperation.length === 0"
+        >
+          {{ operating ? '处理中...' : '取消预约' }}
+        </button>
+        <button
+          class="primary-btn"
+          type="button"
+          @click="handleReserveSelectedSlots"
+          :disabled="operating"
+        >
+          {{ operating ? '处理中...' : '确认预约' }}
+        </button>
       </div>
-    </template>
+    </div>
   </div>
 </template>
 
@@ -723,45 +688,59 @@ onMounted(async () => {
   cursor: pointer;
 }
 
-.category-list {
+.category-chips {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   overflow-x: auto;
   padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
 }
 
-.category-card {
+.category-chips::-webkit-scrollbar {
+  height: 4px;
+}
+
+.category-chips::-webkit-scrollbar-thumb {
+  background: #d0d7e3;
+  border-radius: 2px;
+}
+
+.category-chip {
   flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 16px 20px;
+  gap: 6px;
+  padding: 10px 18px;
   background: #f7f9fd;
   border: 2px solid transparent;
-  border-radius: 12px;
+  border-radius: 20px;
   cursor: pointer;
   transition: all 0.2s ease;
+  font-size: 14px;
 }
 
-.category-card:hover {
+.category-chip:hover {
   border-color: #4a90e2;
+  background: #f0f6ff;
 }
 
-.category-icon {
-  font-size: 28px;
+.category-chip.active {
+  border-color: #4a90e2;
+  background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+  color: white;
 }
 
-.category-name {
-  font-size: 13px;
+.category-chip.active .chip-text {
+  color: white;
+}
+
+.chip-icon {
+  font-size: 16px;
+}
+
+.chip-text {
   font-weight: 500;
   color: #1f2a44;
-}
-
-.category-selected-info {
-  display: flex;
-  align-items: center;
-  gap: 10px;
 }
 
 .instrument-list {
