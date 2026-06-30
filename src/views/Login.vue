@@ -15,7 +15,7 @@
 
       <div class="tip-text">
         <p>请使用管理员分配的账号登录</p>
-        <p>默认密码：123456</p>
+        <p>用户默认密码：123456</p>
       </div>
     </div>
   </div>
@@ -49,7 +49,17 @@ async function handleLogin() {
       throw new Error('请输入密码')
     }
 
-    const email = employeeNo.value.trim().toLowerCase() + '@system.local'
+    const isEmailLogin = employeeNo.value.trim().includes('@')
+    let email
+    let employeeNoForUser
+
+    if (isEmailLogin) {
+      email = employeeNo.value.trim().toLowerCase()
+      employeeNoForUser = ''
+    } else {
+      email = employeeNo.value.trim().toLowerCase() + '@system.local'
+      employeeNoForUser = employeeNo.value.trim()
+    }
 
     const { data, error } = await supabase.auth.signInWithPassword({
       email: email,
@@ -70,17 +80,22 @@ async function handleLogin() {
       console.warn('获取用户profile失败', profileError)
     }
 
-    if (profile && profile.username && profile.username !== name.value.trim()) {
+    if (!isEmailLogin && profile && profile.username && profile.username !== name.value.trim()) {
       await supabase.auth.signOut()
       throw new Error('姓名与工号不匹配')
     }
 
+    const isAdminEmail = data.user.email === 'admin@admin.com'
+    const userRole = profile?.role || (isAdminEmail ? 'admin' : 'user')
+    const userName = profile?.username || name.value.trim()
+    const userEmployeeNo = profile?.employee_no || employeeNoForUser
+
     const user = {
       id: data.user.id,
-      user_name: profile?.username || name.value.trim(),
+      user_name: userName,
       email: data.user.email,
-      employee_no: profile?.employee_no || employeeNo.value.trim(),
-      role: profile?.role || 'user'
+      employee_no: userEmployeeNo,
+      role: userRole
     }
 
     localStorage.setItem('user', JSON.stringify(user))
