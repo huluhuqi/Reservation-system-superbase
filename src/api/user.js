@@ -1,5 +1,29 @@
 import { supabase } from '@/lib/supabase'
 
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || 'https://dqitsleyoxzxdngdwdcq.supabase.co'
+
+async function callEdgeFunction(action, payload = {}) {
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) {
+    throw new Error('未登录')
+  }
+
+  const response = await fetch(`${SUPABASE_URL}/functions/v1/admin-users`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${session.access_token}`
+    },
+    body: JSON.stringify({ action, ...payload })
+  })
+
+  const data = await response.json()
+  if (!response.ok) {
+    throw new Error(data.error || '请求失败')
+  }
+  return data
+}
+
 export const UserAPI = {
   getSettings: async () => {
     const { data, error } = await supabase
@@ -53,41 +77,27 @@ export const UserAPI = {
   },
 
   createUser: async (employeeNo, username, password = '123456', role = 'user') => {
-    const { data, error } = await supabase
-      .rpc('admin_create_user', {
-        p_employee_no: employeeNo,
-        p_username: username,
-        p_password: password,
-        p_role: role
-      })
-    if (error) throw error
-    return data
+    const result = await callEdgeFunction('create', {
+      employee_no: employeeNo,
+      username: username,
+      password: password,
+      role: role
+    })
+    return result.user || result
   },
 
   batchCreateUsers: async (users) => {
-    const { data, error } = await supabase
-      .rpc('admin_batch_create_users', {
-        p_users: users
-      })
-    if (error) throw error
-    return data
+    const result = await callEdgeFunction('batch_create', { users })
+    return result
   },
 
   deleteUser: async (userId) => {
-    const { data, error } = await supabase
-      .rpc('admin_delete_user', {
-        p_user_id: userId
-      })
-    if (error) throw error
-    return data
+    const result = await callEdgeFunction('delete', { user_id: userId })
+    return result.success
   },
 
   batchDeleteUsers: async (userIds) => {
-    const { data, error } = await supabase
-      .rpc('admin_batch_delete_users', {
-        p_user_ids: userIds
-      })
-    if (error) throw error
-    return data
+    const result = await callEdgeFunction('batch_delete', { user_ids: userIds })
+    return result
   }
 }
