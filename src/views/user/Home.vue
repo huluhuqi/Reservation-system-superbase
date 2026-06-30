@@ -190,8 +190,8 @@ onMounted(async () => {
   try {
     systemSettings.value = await UserAPI.getSettings()
     await loadCategories()
-    if (categories.value.length > 0) {
-      await handleSelectCategory(categories.value[0])
+    if (filteredCategories.value.length > 0) {
+      await handleSelectCategory(filteredCategories.value[0])
     }
   } catch (e) {
     console.error(e)

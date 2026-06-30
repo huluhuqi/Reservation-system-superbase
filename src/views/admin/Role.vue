@@ -34,7 +34,7 @@ async function loadData() {
   errorMessage.value = ''
   try {
     roles.value = await RoleAPI.getAll()
-    categories.value = await CategoryAPI.getAll()
+    categories.value = await CategoryAPI.list()
   } catch (e) {
     errorMessage.value = e.message || '加载数据失败'
   } finally {

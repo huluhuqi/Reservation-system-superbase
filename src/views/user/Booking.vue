@@ -605,7 +605,7 @@ onMounted(async () => {
     }
 
     if (savedState?.categoryId) {
-      const savedCategory = categories.value.find(c => c.id === savedState.categoryId)
+      const savedCategory = filteredCategories.value.find(c => c.id === savedState.categoryId)
       if (savedCategory) {
         await handleSelectCategory(savedCategory)
         loading.value = false
@@ -613,8 +613,8 @@ onMounted(async () => {
       }
     }
 
-    if (categories.value.length > 0) {
-      await handleSelectCategory(categories.value[0])
+    if (filteredCategories.value.length > 0) {
+      await handleSelectCategory(filteredCategories.value[0])
     }
   } catch (e) {
     console.error(e)
