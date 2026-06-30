@@ -137,14 +137,6 @@ npm run build
 2. 配置 `.env.production` 中的生产环境变量
 3. 在 GitHub 仓库 Settings → Pages 中选择 `gh-pages` 分支
 
----
-
-## 默认账号
-
-- **管理员邮箱**：admin@admin.com
-- **管理员密码**：admin123
-
-注册 `admin@admin.com` 邮箱的账号会自动获得管理员权限。
 
 ---
 
