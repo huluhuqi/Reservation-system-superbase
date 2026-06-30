@@ -20,6 +20,7 @@ const successMessage = ref('')
 const categories = ref([])
 const selectedCategoryId = ref('')
 const selectedCategoryName = ref('')
+const selectedCategoryIcon = ref('')
 
 const instruments = ref([])
 const selectedInstrumentId = ref('')
@@ -142,6 +143,7 @@ async function loadCategories() {
 async function handleSelectCategory(category) {
   selectedCategoryId.value = category.id
   selectedCategoryName.value = category.category_name
+  selectedCategoryIcon.value = category.category_icon
 
   try {
     const catSettings = await CategoryAPI.getSettings(category.id)
@@ -152,6 +154,11 @@ async function handleSelectCategory(category) {
 
   await loadInstruments()
   await loadAvailability()
+}
+
+function isImageUrl(url) {
+  if (!url) return false
+  return url.startsWith('http') && /\.(jpg|jpeg|png|gif|webp|svg|bmp)(\?|$)/i.test(url)
 }
 
 async function loadInstruments() {
@@ -505,7 +512,10 @@ onMounted(async () => {
           type="button"
           @click="handleSelectCategory(cat)"
         >
-          <div class="category-icon">{{ cat.category_icon || '📱' }}</div>
+          <div class="category-icon">
+            <img v-if="isImageUrl(cat.category_icon)" :src="cat.category_icon" class="category-icon-img" :alt="cat.category_name" />
+            <span v-else>{{ cat.category_icon || '📱' }}</span>
+          </div>
           <div class="category-name">{{ cat.category_name }}</div>
         </button>
       </div>
@@ -730,6 +740,18 @@ onMounted(async () => {
 
 .category-icon {
   font-size: 28px;
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.category-icon-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 8px;
 }
 
 .category-name {

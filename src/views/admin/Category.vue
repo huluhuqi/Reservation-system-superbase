@@ -1,16 +1,19 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { CategoryAPI } from '@/api'
+import { supabase } from '@/lib/supabase'
 
 const loading = ref(false)
 const operating = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
+const uploading = ref(false)
 
 const categories = ref([])
 const form = ref({
   category_name: '',
-  category_icon: ''
+  category_icon: '',
+  icon_type: 'emoji'
 })
 
 async function loadCategories() {
@@ -22,6 +25,51 @@ async function loadCategories() {
   } finally {
     loading.value = false
   }
+}
+
+async function handleImageUpload(event) {
+  const file = event.target.files?.[0]
+  if (!file) return
+
+  if (!file.type.startsWith('image/')) {
+    errorMessage.value = '请上传图片文件'
+    return
+  }
+
+  uploading.value = true
+  errorMessage.value = ''
+  try {
+    const fileExt = file.name.split('.').pop()
+    const fileName = `category_${Date.now()}_${Math.random().toString(36).substring(2, 8)}.${fileExt}`
+
+    const { error: uploadError } = await supabase.storage
+      .from('category-icons')
+      .upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: false
+      })
+
+    if (uploadError) throw uploadError
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('category-icons')
+      .getPublicUrl(fileName)
+
+    form.value.category_icon = publicUrl
+    form.value.icon_type = 'image'
+    successMessage.value = '图片上传成功'
+    setTimeout(() => { successMessage.value = '' }, 2000)
+  } catch (e) {
+    errorMessage.value = '上传失败：' + (e.message || e)
+  } finally {
+    uploading.value = false
+    event.target.value = ''
+  }
+}
+
+function isImageUrl(url) {
+  if (!url) return false
+  return url.startsWith('http') && /\.(jpg|jpeg|png|gif|webp|svg|bmp)(\?|$)/i.test(url)
 }
 
 async function addCategory() {
@@ -40,6 +88,7 @@ async function addCategory() {
     })
     form.value.category_name = ''
     form.value.category_icon = ''
+    form.value.icon_type = 'emoji'
     successMessage.value = '新增类别成功'
     await loadCategories()
     setTimeout(() => { successMessage.value = '' }, 2000)
@@ -61,6 +110,20 @@ async function deleteCategory(item) {
   operating.value = true
   errorMessage.value = ''
   try {
+    if (item.category_icon && isImageUrl(item.category_icon)) {
+      try {
+        const urlParts = item.category_icon.split('/category-icons/')
+        if (urlParts.length === 2) {
+          const fileName = decodeURIComponent(urlParts[1].split('?')[0])
+          await supabase.storage
+            .from('category-icons')
+            .remove([fileName])
+        }
+      } catch (e) {
+        console.warn('删除图片失败，继续删除类别:', e)
+      }
+    }
+
     await CategoryAPI.remove(item.id)
     successMessage.value = '删除类别成功'
     await loadCategories()
@@ -89,11 +152,56 @@ onMounted(() => {
           <input v-model="form.category_name" type="text" placeholder="例如：显微镜" @keydown.enter.prevent="addCategory" />
         </div>
         <div class="field-block">
+          <label>图标类型</label>
+          <div class="icon-type-tabs">
+            <button 
+              type="button"
+              class="tab-btn"
+              :class="{ active: form.icon_type === 'emoji' }"
+              @click="form.icon_type = 'emoji'"
+            >
+              Emoji
+            </button>
+            <button 
+              type="button"
+              class="tab-btn"
+              :class="{ active: form.icon_type === 'image' }"
+              @click="form.icon_type = 'image'"
+            >
+              上传图片
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="field-block" v-if="form.icon_type === 'emoji'">
           <label>图标（选填）</label>
           <input v-model="form.category_icon" type="text" placeholder="例如：🔬" @keydown.enter.prevent="addCategory" />
         </div>
+        <div class="field-block" v-else>
+          <label>上传图片</label>
+          <div class="upload-area">
+            <label class="upload-btn">
+              <input 
+                type="file" 
+                accept="image/*" 
+                @change="handleImageUpload"
+                style="display: none;"
+              />
+              {{ uploading ? '上传中...' : '选择图片' }}
+            </label>
+            <div v-if="form.category_icon && isImageUrl(form.category_icon)" class="preview-img">
+              <img :src="form.category_icon" alt="预览" />
+            </div>
+            <div v-else-if="form.category_icon" class="preview-text">
+              当前图标：{{ form.category_icon }}
+            </div>
+          </div>
+        </div>
       </div>
-      <button class="primary-btn" type="button" @click="addCategory" :disabled="operating">
+
+      <button class="primary-btn" type="button" @click="addCategory" :disabled="operating || uploading">
         {{ operating ? '处理中...' : '新增类别' }}
       </button>
     </div>
@@ -112,7 +220,10 @@ onMounted(() => {
       <div v-else class="category-list">
         <div v-for="item in categories" :key="item.id" class="category-item">
           <div class="category-info">
-            <span class="category-icon">{{ item.category_icon || '📱' }}</span>
+            <span v-if="isImageUrl(item.category_icon)" class="category-icon-img">
+              <img :src="item.category_icon" :alt="item.category_name" />
+            </span>
+            <span v-else class="category-icon">{{ item.category_icon || '📱' }}</span>
             <span class="category-name">{{ item.category_name }}</span>
           </div>
           <button class="text-btn danger" type="button" @click="deleteCategory(item)" :disabled="operating">
@@ -177,6 +288,70 @@ onMounted(() => {
   border-color: #4a90e2;
 }
 
+.icon-type-tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  background: white;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  color: #6b7a99;
+  transition: all 0.2s;
+}
+
+.tab-btn.active {
+  border-color: #4a90e2;
+  background: #e8f0fe;
+  color: #4a90e2;
+}
+
+.upload-area {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.upload-btn {
+  display: inline-block;
+  padding: 8px 16px;
+  background: #f0f4f9;
+  color: #4a90e2;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.upload-btn:hover {
+  background: #e8f0fe;
+}
+
+.preview-img {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+}
+
+.preview-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.preview-text {
+  font-size: 12px;
+  color: #6b7a99;
+}
+
 .primary-btn {
   background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
   color: white;
@@ -211,7 +386,7 @@ onMounted(() => {
 
 .category-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 10px;
 }
 
@@ -232,6 +407,19 @@ onMounted(() => {
 
 .category-icon {
   font-size: 24px;
+}
+
+.category-icon-img {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.category-icon-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .category-name {

@@ -148,6 +148,11 @@ function handleGoToBooking() {
   }
 }
 
+function isImageUrl(url) {
+  if (!url) return false
+  return url.startsWith('http') && /\.(jpg|jpeg|png|gif|webp|svg|bmp)(\?|$)/i.test(url)
+}
+
 onMounted(async () => {
   loading.value = true
   try {
@@ -187,7 +192,8 @@ onMounted(async () => {
             @click="handleSelectCategory(cat)"
           >
             <div class="category-icon-wrap">
-              <span class="category-icon">{{ cat.category_icon || '📱' }}</span>
+              <img v-if="isImageUrl(cat.category_icon)" :src="cat.category_icon" class="category-icon-img" :alt="cat.category_name" />
+              <span v-else class="category-icon">{{ cat.category_icon || '📱' }}</span>
             </div>
             <div class="category-name">{{ cat.category_name }}</div>
           </button>
@@ -213,7 +219,8 @@ onMounted(async () => {
           @click="handleGoToBooking"
         >
           <div class="overview-thumb">
-            <span class="thumb-icon">{{ selectedCategory?.category_icon || '📱' }}</span>
+            <img v-if="isImageUrl(selectedCategory?.category_icon)" :src="selectedCategory.category_icon" class="thumb-icon-img" :alt="selectedCategory.category_name" />
+            <span v-else class="thumb-icon">{{ selectedCategory?.category_icon || '📱' }}</span>
           </div>
           <div class="overview-main">
             <div class="overview-title">{{ item.instrument_name }}</div>
@@ -403,6 +410,13 @@ onMounted(async () => {
 
 .thumb-icon {
   font-size: 24px;
+}
+
+.category-icon-img,
+.thumb-icon-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .overview-main {
