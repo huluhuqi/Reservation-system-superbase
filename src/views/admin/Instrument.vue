@@ -13,8 +13,11 @@ const selected_category_id = ref('')
 
 const form = ref({
   instrument_name: '',
-  category_id: ''
+  category_id: '',
+  description: ''
 })
+const editMode = ref(false)
+const editingId = ref(null)
 
 const filtered_instruments = computed(() => {
   if (!selected_category_id.value) return instruments.value
@@ -76,6 +79,56 @@ async function addInstrument() {
   }
 }
 
+function editInstrument(item) {
+  editingId.value = item.id
+  form.value.instrument_name = item.instrument_name
+  form.value.category_id = item.category_id
+  form.value.description = item.description || ''
+  editMode.value = true
+}
+
+function cancelEdit() {
+  editMode.value = false
+  editingId.value = null
+  form.value.instrument_name = ''
+  form.value.category_id = categories.value[0]?.id || ''
+  form.value.description = ''
+}
+
+async function saveInstrument() {
+  const instrument_name = form.value.instrument_name.trim()
+  const category_id = form.value.category_id
+
+  if (!instrument_name) {
+    error_message.value = '请输入仪器名称'
+    return
+  }
+  if (!category_id) {
+    error_message.value = '请先创建仪器类别'
+    return
+  }
+
+  operating.value = true
+  error_message.value = ''
+  try {
+    await InstrumentAPI.update(editingId.value, {
+      instrument_name,
+      category_id,
+      description: form.value.description.trim()
+    })
+    cancelEdit()
+    success_message.value = '修改仪器成功'
+    await loadInstruments()
+    setTimeout(() => { success_message.value = '' }, 2000)
+  } catch (e) {
+    error_message.value = e.message || '修改失败'
+  } finally {
+    setTimeout(() => {
+      operating.value = false
+    }, 1200)
+  }
+}
+
 async function deleteInstrument(item) {
   const confirmed = window.confirm(`确定删除仪器"${item.instrument_name}"吗？`)
   if (!confirmed) return
@@ -110,7 +163,7 @@ onMounted(async () => {
 <template>
   <div class="admin-page">
     <div class="form-card">
-      <h3>新增仪器</h3>
+      <h3>{{ editMode ? '编辑仪器' : '新增仪器' }}</h3>
       <div class="form-row">
         <div class="field-block">
           <label>所属类别</label>
@@ -124,11 +177,27 @@ onMounted(async () => {
             v-model="form.instrument_name"
             type="text"
             placeholder="例如：显微镜A"
-            @keydown.enter.prevent="addInstrument"
+            @keydown.enter.prevent="editMode ? saveInstrument() : addInstrument()"
           />
         </div>
       </div>
-      <button class="primary-btn" type="button" @click="addInstrument" :disabled="operating">
+      <div class="form-row">
+        <div class="field-block" style="flex: 2;">
+          <label>备注（选填）</label>
+          <textarea
+            v-model="form.description"
+            placeholder="输入仪器备注信息..."
+            rows="3"
+          ></textarea>
+        </div>
+      </div>
+      <div class="form-actions" v-if="editMode">
+        <button class="secondary-btn" type="button" @click="cancelEdit">取消</button>
+        <button class="primary-btn" type="button" @click="saveInstrument" :disabled="operating">
+          {{ operating ? '处理中...' : '保存修改' }}
+        </button>
+      </div>
+      <button v-else class="primary-btn" type="button" @click="addInstrument" :disabled="operating">
         {{ operating ? '处理中...' : '新增仪器' }}
       </button>
     </div>
@@ -155,10 +224,16 @@ onMounted(async () => {
           <div class="instrument-info">
             <div class="instrument-name">{{ item.instrument_name }}</div>
             <div class="instrument-category">{{ getCategoryName(item.category_id) }}</div>
+            <div v-if="item.description" class="instrument-desc">{{ item.description }}</div>
           </div>
-          <button class="text-btn danger" type="button" @click="deleteInstrument(item)" :disabled="operating">
-            删除
-          </button>
+          <div class="instrument-actions">
+            <button class="text-btn" type="button" @click="editInstrument(item)" :disabled="operating">
+              编辑
+            </button>
+            <button class="text-btn danger" type="button" @click="deleteInstrument(item)" :disabled="operating">
+              删除
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -206,7 +281,8 @@ onMounted(async () => {
 }
 
 .field-block input,
-.field-block select {
+.field-block select,
+.field-block textarea {
   padding: 10px 14px;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
@@ -214,8 +290,13 @@ onMounted(async () => {
   outline: none;
 }
 
+.field-block textarea {
+  resize: vertical;
+}
+
 .field-block input:focus,
-.field-block select:focus {
+.field-block select:focus,
+.field-block textarea:focus {
   border-color: #4a90e2;
 }
 
@@ -232,6 +313,11 @@ onMounted(async () => {
 .primary-btn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
 }
 
 .list-header {
@@ -291,6 +377,11 @@ onMounted(async () => {
   flex: 1;
 }
 
+.instrument-actions {
+  display: flex;
+  gap: 8px;
+}
+
 .instrument-name {
   font-size: 14px;
   font-weight: 500;
@@ -301,6 +392,13 @@ onMounted(async () => {
   font-size: 12px;
   color: #6b7a99;
   margin-top: 4px;
+}
+
+.instrument-desc {
+  font-size: 12px;
+  color: #8a9ab5;
+  margin-top: 4px;
+  font-style: italic;
 }
 
 .text-btn {

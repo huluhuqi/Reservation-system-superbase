@@ -238,8 +238,9 @@ onMounted(async () => {
               ></div>
             </div>
           </div>
-          <div class="overview-count">
-            {{ item.freeCount }}/{{ item.totalCount }}
+          <div class="overview-right">
+            <div class="overview-count">{{ item.freeCount }}/{{ item.totalCount }}</div>
+            <div v-if="item.description" class="overview-desc">备注：{{ item.description }}</div>
           </div>
         </div>
       </div>
@@ -480,6 +481,25 @@ onMounted(async () => {
   flex-shrink: 0;
   min-width: 50px;
   text-align: right;
+}
+
+.overview-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+  min-width: 50px;
+}
+
+.overview-desc {
+  font-size: 11px;
+  color: #8a9ab5;
+  text-align: right;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .empty-text {

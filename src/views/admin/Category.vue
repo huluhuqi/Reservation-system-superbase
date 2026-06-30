@@ -15,6 +15,8 @@ const form = ref({
   category_icon: '',
   icon_type: 'emoji'
 })
+const editMode = ref(false)
+const editingId = ref(null)
 
 async function loadCategories() {
   loading.value = true
@@ -101,6 +103,49 @@ async function addCategory() {
   }
 }
 
+function editCategory(item) {
+  editingId.value = item.id
+  form.value.category_name = item.category_name
+  form.value.category_icon = item.category_icon || ''
+  form.value.icon_type = isImageUrl(item.category_icon) ? 'image' : 'emoji'
+  editMode.value = true
+}
+
+function cancelEdit() {
+  editMode.value = false
+  editingId.value = null
+  form.value.category_name = ''
+  form.value.category_icon = ''
+  form.value.icon_type = 'emoji'
+}
+
+async function saveCategory() {
+  const category_name = form.value.category_name.trim()
+  if (!category_name) {
+    errorMessage.value = '请输入类别名称'
+    return
+  }
+
+  operating.value = true
+  errorMessage.value = ''
+  try {
+    await CategoryAPI.update(editingId.value, {
+      category_name,
+      category_icon: form.value.category_icon.trim()
+    })
+    cancelEdit()
+    successMessage.value = '修改类别成功'
+    await loadCategories()
+    setTimeout(() => { successMessage.value = '' }, 2000)
+  } catch (e) {
+    errorMessage.value = e.message || '修改失败'
+  } finally {
+    setTimeout(() => {
+      operating.value = false
+    }, 1200)
+  }
+}
+
 async function deleteCategory(item) {
   const confirmed = window.confirm(
     `确定删除类别"${item.category_name}"吗？该类别下的所有仪器和预约记录也会被删除。`
@@ -145,11 +190,11 @@ onMounted(() => {
 <template>
   <div class="admin-page">
     <div class="form-card">
-      <h3>新增类别</h3>
+      <h3>{{ editMode ? '编辑类别' : '新增类别' }}</h3>
       <div class="form-row">
         <div class="field-block">
           <label>类别名称</label>
-          <input v-model="form.category_name" type="text" placeholder="例如：显微镜" @keydown.enter.prevent="addCategory" />
+          <input v-model="form.category_name" type="text" placeholder="例如：显微镜" @keydown.enter.prevent="editMode ? saveCategory() : addCategory()" />
         </div>
         <div class="field-block">
           <label>图标类型</label>
@@ -177,7 +222,7 @@ onMounted(() => {
       <div class="form-row">
         <div class="field-block" v-if="form.icon_type === 'emoji'">
           <label>图标（选填）</label>
-          <input v-model="form.category_icon" type="text" placeholder="例如：🔬" @keydown.enter.prevent="addCategory" />
+          <input v-model="form.category_icon" type="text" placeholder="例如：🔬" @keydown.enter.prevent="editMode ? saveCategory() : addCategory()" />
         </div>
         <div class="field-block" v-else>
           <label>上传图片</label>
@@ -201,7 +246,13 @@ onMounted(() => {
         </div>
       </div>
 
-      <button class="primary-btn" type="button" @click="addCategory" :disabled="operating || uploading">
+      <div class="form-actions" v-if="editMode">
+        <button class="secondary-btn" type="button" @click="cancelEdit">取消</button>
+        <button class="primary-btn" type="button" @click="saveCategory" :disabled="operating || uploading">
+          {{ operating ? '处理中...' : '保存修改' }}
+        </button>
+      </div>
+      <button v-else class="primary-btn" type="button" @click="addCategory" :disabled="operating || uploading">
         {{ operating ? '处理中...' : '新增类别' }}
       </button>
     </div>
@@ -218,19 +269,24 @@ onMounted(() => {
       <div v-if="loading" class="loading-text">加载中...</div>
       <div v-else-if="categories.length === 0" class="empty-text">暂无类别</div>
       <div v-else class="category-list">
-        <div v-for="item in categories" :key="item.id" class="category-item">
-          <div class="category-info">
-            <span v-if="isImageUrl(item.category_icon)" class="category-icon-img">
-              <img :src="item.category_icon" :alt="item.category_name" />
-            </span>
-            <span v-else class="category-icon">{{ item.category_icon || '📱' }}</span>
-            <span class="category-name">{{ item.category_name }}</span>
+            <div v-for="item in categories" :key="item.id" class="category-item">
+              <div class="category-info">
+                <span v-if="isImageUrl(item.category_icon)" class="category-icon-img">
+                  <img :src="item.category_icon" :alt="item.category_name" />
+                </span>
+                <span v-else class="category-icon">{{ item.category_icon || '📱' }}</span>
+                <span class="category-name">{{ item.category_name }}</span>
+              </div>
+              <div class="category-actions">
+                <button class="text-btn" type="button" @click="editCategory(item)" :disabled="operating">
+                  编辑
+                </button>
+                <button class="text-btn danger" type="button" @click="deleteCategory(item)" :disabled="operating">
+                  删除
+                </button>
+              </div>
+            </div>
           </div>
-          <button class="text-btn danger" type="button" @click="deleteCategory(item)" :disabled="operating">
-            删除
-          </button>
-        </div>
-      </div>
     </div>
   </div>
 </template>
@@ -367,6 +423,11 @@ onMounted(() => {
   cursor: not-allowed;
 }
 
+.form-actions {
+  display: flex;
+  gap: 12px;
+}
+
 .secondary-btn {
   background: #f0f4f9;
   color: #1f2a44;
@@ -403,6 +464,11 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 10px;
+}
+
+.category-actions {
+  display: flex;
+  gap: 8px;
 }
 
 .category-icon {
