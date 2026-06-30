@@ -213,42 +213,42 @@ onMounted(async () => {
 .admin-page {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 .form-card,
 .list-card {
-  background: white;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-md);
 }
 
 .type-tabs {
   display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
 }
 
 .type-btn {
-  padding: 8px 20px;
-  background: #f0f4f9;
+  padding: var(--space-2) var(--space-5);
+  background: var(--hover);
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   font-size: 14px;
-  color: #6b7a99;
+  color: var(--text-secondary);
   cursor: pointer;
 }
 
 .type-btn.active {
-  background: #4a90e2;
+  background: var(--primary);
   color: white;
 }
 
 .form-row {
   display: flex;
-  gap: 16px;
-  margin-bottom: 16px;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
   flex-wrap: wrap;
 }
 
@@ -257,34 +257,34 @@ onMounted(async () => {
   min-width: 150px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-1);
 }
 
 .field-block label {
   font-size: 13px;
-  color: #6b7a99;
+  color: var(--text-secondary);
 }
 
 .field-block input,
 .field-block select {
-  padding: 10px 14px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
   font-size: 14px;
   outline: none;
 }
 
 .field-block input:focus,
 .field-block select:focus {
-  border-color: #4a90e2;
+  border-color: var(--primary);
 }
 
 .primary-btn {
-  background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+  background: var(--primary);
   color: white;
   border: none;
-  border-radius: 8px;
-  padding: 10px 24px;
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-6);
   font-size: 14px;
   cursor: pointer;
 }
@@ -295,11 +295,11 @@ onMounted(async () => {
 }
 
 .secondary-btn {
-  background: #f0f4f9;
-  color: #1f2a44;
+  background: var(--hover);
+  color: var(--text-primary);
   border: none;
-  border-radius: 8px;
-  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-4);
   font-size: 13px;
   cursor: pointer;
 }
@@ -308,29 +308,29 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: var(--space-4);
 }
 
 .list-header h3 {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
-  color: #1f2a44;
+  color: var(--text-primary);
 }
 
 .lock-list {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .lock-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 16px;
-  background: #fff7e6;
-  border-radius: 10px;
+  padding: var(--space-3) var(--space-4);
+  background: var(--warning-soft);
+  border-radius: var(--radius-md);
 }
 
 .lock-info {
@@ -340,25 +340,25 @@ onMounted(async () => {
 .lock-title {
   font-size: 14px;
   font-weight: 500;
-  color: #1f2a44;
+  color: var(--text-primary);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .lock-type {
   font-size: 11px;
-  padding: 2px 8px;
-  background: #f39c12;
+  padding: 2px var(--space-2);
+  background: var(--warning);
   color: white;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   font-weight: normal;
 }
 
 .lock-sub {
   font-size: 12px;
-  color: #6b7a99;
-  margin-top: 4px;
+  color: var(--text-secondary);
+  margin-top: var(--space-1);
 }
 
 .text-btn {
@@ -366,16 +366,16 @@ onMounted(async () => {
   border: none;
   font-size: 13px;
   cursor: pointer;
-  padding: 6px 12px;
-  border-radius: 6px;
+  padding: var(--space-1) var(--space-3);
+  border-radius: var(--radius-sm);
 }
 
 .text-btn.danger {
-  color: #e74c3c;
+  color: var(--danger);
 }
 
 .text-btn.danger:hover {
-  background: #fef0f0;
+  background: var(--danger-soft);
 }
 
 .text-btn:disabled {
@@ -387,16 +387,16 @@ onMounted(async () => {
 .empty-text {
   text-align: center;
   padding: 30px;
-  color: #8a9ab5;
+  color: var(--text-muted);
   font-size: 14px;
 }
 
 .notice {
-  padding: 10px 14px;
-  border-radius: 10px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
   font-size: 14px;
 }
 
-.notice.error { background: #fef0f0; color: #e74c3c; }
-.notice.success { background: #f0f9f4; color: #27ae60; }
+.notice.error { background: var(--danger-soft); color: var(--danger); }
+.notice.success { background: var(--success-soft); color: var(--success); }
 </style>

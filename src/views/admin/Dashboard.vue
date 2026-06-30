@@ -124,29 +124,29 @@ onMounted(() => {
 .dashboard-page {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: var(--space-5);
 }
 
 .loading-text {
   text-align: center;
   padding: 40px;
-  color: #8a9ab5;
+  color: var(--text-muted);
 }
 
 .stats-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 .stat-card {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 20px;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  gap: var(--space-4);
+  padding: var(--space-5);
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
 }
 
 .stat-icon {
@@ -156,14 +156,14 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 12px;
-  background: #f0f6ff;
+  border-radius: var(--radius-lg);
+  background: var(--primary-soft);
 }
 
-.stat-card.blue .stat-icon { background: #e6f0ff; }
-.stat-card.green .stat-icon { background: #e8f8f0; }
-.stat-card.orange .stat-icon { background: #fff4e6; }
-.stat-card.purple .stat-icon { background: #f0e6ff; }
+.stat-card.blue .stat-icon { background: var(--primary-soft); }
+.stat-card.green .stat-icon { background: var(--success-soft); }
+.stat-card.orange .stat-icon { background: var(--warning-soft); }
+.stat-card.purple .stat-icon { background: var(--warning-soft); }
 
 .stat-info {
   flex: 1;
@@ -172,40 +172,40 @@ onMounted(() => {
 .stat-value {
   font-size: 28px;
   font-weight: 700;
-  color: #1f2a44;
+  color: var(--text-primary);
   line-height: 1.2;
 }
 
 .stat-label {
   font-size: 13px;
-  color: #6b7a99;
-  margin-top: 4px;
+  color: var(--text-secondary);
+  margin-top: var(--space-1);
 }
 
 .panel-card {
-  background: white;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-md);
 }
 
 .panel-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: var(--space-4);
 }
 
 .panel-header h3 {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
-  color: #1f2a44;
+  color: var(--text-primary);
 }
 
 .view-all {
   font-size: 13px;
-  color: #4a90e2;
+  color: var(--primary);
   text-decoration: none;
 }
 
@@ -216,16 +216,16 @@ onMounted(() => {
 .booking-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--space-2);
 }
 
 .booking-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 14px;
-  background: #f7f9fd;
-  border-radius: 10px;
+  padding: var(--space-3) var(--space-3);
+  background: var(--disabled-soft);
+  border-radius: var(--radius-md);
 }
 
 .booking-info {
@@ -235,46 +235,46 @@ onMounted(() => {
 .booking-title {
   font-size: 14px;
   font-weight: 500;
-  color: #1f2a44;
+  color: var(--text-primary);
 }
 
 .booking-sub {
   font-size: 12px;
-  color: #6b7a99;
-  margin-top: 2px;
+  color: var(--text-secondary);
+  margin-top: var(--space-1);
 }
 
 .booking-time {
   font-size: 13px;
   font-weight: 500;
-  color: #4a90e2;
-  background: #f0f6ff;
-  padding: 4px 10px;
-  border-radius: 6px;
+  color: var(--primary);
+  background: var(--primary-soft);
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
 }
 
 .quick-actions {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .action-btn {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
-  padding: 20px 12px;
-  background: #f7f9fd;
-  border-radius: 10px;
+  gap: var(--space-2);
+  padding: var(--space-5) var(--space-3);
+  background: var(--disabled-soft);
+  border-radius: var(--radius-md);
   text-decoration: none;
-  color: #1f2a44;
+  color: var(--text-primary);
   font-size: 13px;
   transition: all 0.2s ease;
 }
 
 .action-btn:hover {
-  background: #eef3fb;
+  background: var(--hover);
   transform: translateY(-2px);
 }
 
@@ -284,7 +284,7 @@ onMounted(() => {
 
 .empty-text {
   text-align: center;
-  color: #9aa8c4;
+  color: var(--text-muted);
   padding: 30px 0;
   font-size: 14px;
 }

@@ -49,7 +49,7 @@ async function handleLogout() {
 
 .sidebar {
   width: 200px;
-  background: #1f2a44;
+  background: var(--primary);
   color: white;
   display: flex;
   flex-direction: column;
@@ -58,34 +58,35 @@ async function handleLogout() {
   left: 0;
   bottom: 0;
   z-index: 100;
+  box-shadow: var(--shadow-md);
 }
 
 .sidebar-header {
-  padding: 20px;
+  padding: var(--space-5);
   font-size: 16px;
   font-weight: 600;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 .menu-section {
   flex: 1;
   overflow-y: auto;
-  padding: 10px 0;
+  padding: var(--space-2) 0;
 }
 
 .menu-bottom {
-  border-top: 1px solid rgba(255,255,255,0.1);
-  padding: 10px 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  padding: var(--space-2) 0;
   flex-shrink: 0;
 }
 
 button {
   display: block;
   width: 100%;
-  padding: 12px 20px;
+  padding: var(--space-3) var(--space-5);
   background: none;
   border: none;
-  color: rgba(255, 255, 255, 0.7);
+  color: rgba(255, 255, 255, 0.75);
   text-align: left;
   font-size: 14px;
   cursor: pointer;
@@ -93,23 +94,23 @@ button {
 }
 
 button:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--primary-hover);
   color: white;
 }
 
 .logout-btn {
-  color: #ff6b6b;
+  color: var(--danger-soft);
 }
 
 .logout-btn:hover {
-  background: rgba(255, 107, 107, 0.1);
-  color: #ff6b6b;
+  background: var(--danger);
+  color: white;
 }
 
 .content {
   flex: 1;
   margin-left: 200px;
-  background: #f5f7fa;
+  background: var(--bg);
   min-height: 100vh;
 }
 </style>

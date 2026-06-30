@@ -3,6 +3,7 @@ import App from './App.vue'
 import router from './router'
 import { supabase } from './lib/supabase'
 import './permission'
+import './styles/global.css'
 
 async function initApp() {
   try {

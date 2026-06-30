@@ -332,56 +332,56 @@ onMounted(() => {
 .admin-page {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 .list-card,
 .info-card {
-  background: white;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-md);
 }
 
 .list-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: var(--space-4);
   flex-wrap: wrap;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .list-header h3 {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
-  color: #1f2a44;
+  color: var(--text-primary);
 }
 
 .header-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .primary-btn,
 .secondary-btn,
 .danger-btn {
   border: none;
-  border-radius: 8px;
-  padding: 8px 16px;
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-4);
   font-size: 13px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .primary-btn {
-  background: #4a90e2;
+  background: var(--primary);
   color: white;
 }
 
 .primary-btn:hover:not(:disabled) {
-  background: #357abd;
+  background: var(--primary-hover);
 }
 
 .primary-btn:disabled {
@@ -390,16 +390,16 @@ onMounted(() => {
 }
 
 .secondary-btn {
-  background: #f0f4f9;
-  color: #1f2a44;
+  background: var(--hover);
+  color: var(--text-primary);
 }
 
 .secondary-btn:hover {
-  background: #e2e8f0;
+  background: var(--line);
 }
 
 .danger-btn {
-  background: #e74c3c;
+  background: var(--danger);
   color: white;
 }
 
@@ -416,18 +416,18 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #e8f4fd;
-  padding: 10px 16px;
-  border-radius: 8px;
-  margin-bottom: 12px;
+  background: var(--primary-soft);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-3);
   font-size: 14px;
-  color: #4a90e2;
+  color: var(--primary);
   font-weight: 500;
 }
 
 .user-table {
-  border: 1px solid #e8ecf3;
-  border-radius: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
   overflow: hidden;
 }
 
@@ -435,14 +435,14 @@ onMounted(() => {
 .table-row {
   display: flex;
   align-items: center;
-  padding: 12px 16px;
+  padding: var(--space-3) var(--space-4);
 }
 
 .table-head {
-  background: #f7f9fd;
+  background: var(--disabled-soft);
   font-weight: 600;
   font-size: 13px;
-  color: #6b7a99;
+  color: var(--text-secondary);
 }
 
 .table-body {
@@ -451,13 +451,13 @@ onMounted(() => {
 }
 
 .table-row {
-  border-top: 1px solid #f0f2f7;
+  border-top: 1px solid var(--line);
   font-size: 14px;
-  color: #1f2a44;
+  color: var(--text-primary);
 }
 
 .table-row:hover {
-  background: #fafbfd;
+  background: var(--hover);
 }
 
 .row-disabled {
@@ -495,7 +495,7 @@ onMounted(() => {
 
 .col-date {
   width: 120px;
-  color: #6b7a99;
+  color: var(--text-secondary);
   flex-shrink: 0;
 }
 
@@ -506,19 +506,19 @@ onMounted(() => {
 
 .badge {
   display: inline-block;
-  padding: 2px 10px;
-  border-radius: 10px;
+  padding: 2px var(--space-2);
+  border-radius: var(--radius-md);
   font-size: 12px;
 }
 
 .badge-user {
-  background: #e8f4fd;
-  color: #4a90e2;
+  background: var(--primary-soft);
+  color: var(--primary);
 }
 
 .badge-admin {
-  background: #fff3e0;
-  color: #f39c12;
+  background: var(--warning-soft);
+  color: var(--warning);
 }
 
 .link-btn {
@@ -527,11 +527,11 @@ onMounted(() => {
   padding: 0;
   cursor: pointer;
   font-size: 13px;
-  color: #4a90e2;
+  color: var(--primary);
 }
 
 .link-btn.danger {
-  color: #e74c3c;
+  color: var(--danger);
 }
 
 .link-btn:hover {
@@ -539,7 +539,7 @@ onMounted(() => {
 }
 
 .muted {
-  color: #b0b8c8;
+  color: var(--text-muted);
   font-size: 13px;
 }
 
@@ -547,50 +547,50 @@ onMounted(() => {
 .empty-text {
   text-align: center;
   padding: 30px;
-  color: #8a9ab5;
+  color: var(--text-muted);
   font-size: 14px;
 }
 
 .notice {
-  padding: 10px 14px;
-  border-radius: 10px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
   font-size: 14px;
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
   white-space: pre-line;
 }
 
 .notice.error {
-  background: #fef0f0;
-  color: #e74c3c;
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 
 .notice.success {
-  background: #e8f5e9;
-  color: #27ae60;
+  background: var(--success-soft);
+  color: var(--success);
 }
 
 .info-card {
-  background: #f0f6ff;
-  border: 1px solid #d0e3ff;
+  background: var(--primary-soft);
+  border: 1px solid var(--primary-soft);
 }
 
 .info-card h4 {
-  margin: 0 0 12px;
+  margin: 0 0 var(--space-3);
   font-size: 14px;
   font-weight: 600;
-  color: #1f2a44;
+  color: var(--text-primary);
 }
 
 .info-card ul {
   margin: 0;
   padding-left: 20px;
   font-size: 13px;
-  color: #4a5568;
+  color: var(--text-secondary);
   line-height: 1.8;
 }
 
 .info-card li {
-  margin-bottom: 4px;
+  margin-bottom: var(--space-1);
 }
 
 .modal-mask {
@@ -604,16 +604,16 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  padding: 20px;
+  padding: var(--space-5);
 }
 
 .modal-box {
-  background: white;
-  border-radius: 16px;
-  padding: 24px;
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
   width: 100%;
   max-width: 400px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-md);
 }
 
 .modal-box.wide {
@@ -621,31 +621,31 @@ onMounted(() => {
 }
 
 .modal-box h3 {
-  margin: 0 0 20px;
+  margin: 0 0 var(--space-5);
   font-size: 18px;
   font-weight: 600;
-  color: #1f2a44;
+  color: var(--text-primary);
 }
 
 .form-group {
-  margin-bottom: 16px;
+  margin-bottom: var(--space-4);
 }
 
 .form-group label {
   display: block;
-  margin-bottom: 6px;
+  margin-bottom: var(--space-1);
   font-size: 13px;
   font-weight: 500;
-  color: #4a5568;
+  color: var(--text-secondary);
 }
 
 .form-group input,
 .form-group select,
 .form-group textarea {
   width: 100%;
-  padding: 10px 12px;
-  border: 2px solid #e2e8f0;
-  border-radius: 8px;
+  padding: var(--space-2) var(--space-3);
+  border: 2px solid var(--line);
+  border-radius: var(--radius-md);
   font-size: 14px;
   box-sizing: border-box;
   outline: none;
@@ -656,20 +656,20 @@ onMounted(() => {
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
-  border-color: #4a90e2;
+  border-color: var(--primary);
 }
 
 .form-tip {
   font-size: 12px;
-  color: #8a9ab5;
-  margin-bottom: 16px;
+  color: var(--text-muted);
+  margin-bottom: var(--space-4);
   line-height: 1.6;
 }
 
 .modal-actions {
   display: flex;
-  gap: 10px;
+  gap: var(--space-2);
   justify-content: flex-end;
-  margin-top: 20px;
+  margin-top: var(--space-5);
 }
 </style>

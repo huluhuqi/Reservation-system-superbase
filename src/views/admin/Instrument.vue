@@ -244,48 +244,48 @@ onMounted(async () => {
 .admin-page {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
 }
 
 .form-card,
 .list-card {
-  background: white;
-  border-radius: 12px;
-  padding: 20px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  box-shadow: var(--shadow-sm);
 }
 
 .form-card h3 {
-  margin: 0 0 16px;
+  margin: 0 0 var(--space-4);
   font-size: 16px;
   font-weight: 600;
-  color: #1f2a44;
+  color: var(--text-primary);
 }
 
 .form-row {
   display: flex;
-  gap: 16px;
-  margin-bottom: 16px;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
 }
 
 .field-block {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-2);
 }
 
 .field-block label {
   font-size: 13px;
-  color: #6b7a99;
+  color: var(--text-secondary);
 }
 
 .field-block input,
 .field-block select,
 .field-block textarea {
   padding: 10px 14px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
   font-size: 14px;
   outline: none;
 }
@@ -297,80 +297,90 @@ onMounted(async () => {
 .field-block input:focus,
 .field-block select:focus,
 .field-block textarea:focus {
-  border-color: #4a90e2;
+  border-color: var(--primary);
 }
 
 .primary-btn {
-  background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+  background: var(--primary);
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   padding: 10px 24px;
   font-size: 14px;
   cursor: pointer;
+  transition: background 0.2s;
+}
+
+.primary-btn:hover:not(:disabled) {
+  background: var(--primary-hover);
 }
 
 .primary-btn:disabled {
-  opacity: 0.6;
+  background: var(--disabled);
   cursor: not-allowed;
 }
 
 .form-actions {
   display: flex;
-  gap: 12px;
+  gap: var(--space-3);
 }
 
 .list-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: var(--space-4);
 }
 
 .list-header h3 {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
-  color: #1f2a44;
+  color: var(--text-primary);
 }
 
 .filter-select {
   display: flex;
-  gap: 10px;
+  gap: var(--space-3);
   align-items: center;
 }
 
 .filter-select select {
   padding: 8px 12px;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
   font-size: 13px;
   outline: none;
 }
 
 .secondary-btn {
-  background: #f0f4f9;
-  color: #1f2a44;
+  background: var(--hover);
+  color: var(--text-primary);
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   padding: 8px 16px;
   font-size: 13px;
   cursor: pointer;
+  transition: background 0.2s;
+}
+
+.secondary-btn:hover {
+  background: var(--line);
 }
 
 .instrument-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 10px;
+  gap: var(--space-3);
 }
 
 .instrument-item {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px;
-  background: #f7f9fd;
-  border-radius: 10px;
+  padding: var(--space-3);
+  background: var(--bg);
+  border-radius: var(--radius-md);
 }
 
 .instrument-info {
@@ -379,25 +389,25 @@ onMounted(async () => {
 
 .instrument-actions {
   display: flex;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .instrument-name {
   font-size: 14px;
   font-weight: 500;
-  color: #1f2a44;
+  color: var(--text-primary);
 }
 
 .instrument-category {
   font-size: 12px;
-  color: #6b7a99;
-  margin-top: 4px;
+  color: var(--text-secondary);
+  margin-top: var(--space-1);
 }
 
 .instrument-desc {
   font-size: 12px;
-  color: #8a9ab5;
-  margin-top: 4px;
+  color: var(--text-muted);
+  margin-top: var(--space-1);
   font-style: italic;
 }
 
@@ -407,15 +417,20 @@ onMounted(async () => {
   font-size: 13px;
   cursor: pointer;
   padding: 4px 10px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
+  transition: background 0.2s;
+}
+
+.text-btn:hover:not(:disabled) {
+  background: var(--hover);
 }
 
 .text-btn.danger {
-  color: #e74c3c;
+  color: var(--danger);
 }
 
 .text-btn.danger:hover {
-  background: #fef0f0;
+  background: var(--danger-soft);
 }
 
 .text-btn:disabled {
@@ -427,16 +442,16 @@ onMounted(async () => {
 .empty-text {
   text-align: center;
   padding: 30px;
-  color: #8a9ab5;
+  color: var(--text-muted);
   font-size: 14px;
 }
 
 .notice {
   padding: 10px 14px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   font-size: 14px;
 }
 
-.notice.error { background: #fef0f0; color: #e74c3c; }
-.notice.success { background: #f0f9f4; color: #27ae60; }
+.notice.error { background: var(--danger-soft); color: var(--danger); }
+.notice.success { background: var(--success-soft); color: var(--success); }
 </style>

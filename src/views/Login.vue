@@ -121,30 +121,30 @@ async function handleLogin() {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
 }
 
 .login-card {
   width: 360px;
   padding: 40px;
-  background: white;
-  border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
 }
 
 .login-card h2 {
   margin: 0 0 32px;
   text-align: center;
-  color: #1f2a44;
+  color: var(--text-primary);
   font-size: 24px;
   font-weight: 600;
 }
 
 .error-msg {
   padding: 12px 16px;
-  background: #fef0f0;
-  color: #e74c3c;
-  border-radius: 8px;
+  background: var(--danger-soft);
+  color: var(--danger);
+  border-radius: var(--radius-md);
   font-size: 14px;
   margin-bottom: 16px;
   text-align: center;
@@ -152,9 +152,9 @@ async function handleLogin() {
 
 .success-msg {
   padding: 12px 16px;
-  background: #e8f5e9;
-  color: #27ae60;
-  border-radius: 8px;
+  background: var(--success-soft);
+  color: var(--success);
+  border-radius: var(--radius-md);
   font-size: 14px;
   margin-bottom: 16px;
   text-align: center;
@@ -164,8 +164,8 @@ async function handleLogin() {
   width: 100%;
   padding: 14px 16px;
   margin-bottom: 16px;
-  border: 2px solid #e2e8f0;
-  border-radius: 10px;
+  border: 2px solid var(--line);
+  border-radius: var(--radius-md);
   font-size: 15px;
   box-sizing: border-box;
   outline: none;
@@ -173,16 +173,16 @@ async function handleLogin() {
 }
 
 .login-card input:focus {
-  border-color: #667eea;
+  border-color: var(--primary);
 }
 
 .login-card button {
   width: 100%;
   padding: 14px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
   color: white;
   border: none;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   font-size: 16px;
   font-weight: 500;
   cursor: pointer;
@@ -194,14 +194,14 @@ async function handleLogin() {
 }
 
 .login-card button:disabled {
-  opacity: 0.6;
+  background: var(--disabled);
   cursor: not-allowed;
 }
 
 .tip-text {
   margin-top: 20px;
   text-align: center;
-  color: #8a9ab5;
+  color: var(--text-muted);
   font-size: 13px;
 }
 

@@ -135,15 +135,15 @@ async function changePassword() {
 .admin-page {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--space-4);
   max-width: 500px;
 }
 
 .password-card {
-  background: white;
-  border-radius: 12px;
+  background: var(--card);
+  border-radius: var(--radius-lg);
   padding: 32px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-md);
 }
 
 .card-header {
@@ -153,24 +153,24 @@ async function changePassword() {
 
 .lock-icon {
   font-size: 48px;
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
 }
 
 .card-header h3 {
-  margin: 0 0 8px;
+  margin: 0 0 var(--space-2);
   font-size: 20px;
   font-weight: 600;
-  color: #1f2a44;
+  color: var(--text-primary);
 }
 
 .subtitle {
   margin: 0;
   font-size: 13px;
-  color: #6b7a99;
+  color: var(--text-secondary);
 }
 
 .form-body {
-  margin-bottom: 24px;
+  margin-bottom: var(--space-6);
 }
 
 .field-block {
@@ -180,16 +180,16 @@ async function changePassword() {
 .field-block label {
   display: block;
   font-size: 13px;
-  color: #4a5568;
-  margin-bottom: 8px;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-2);
   font-weight: 500;
 }
 
 .field-block input {
   width: 100%;
-  padding: 12px 16px;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
   font-size: 15px;
   outline: none;
   transition: border-color 0.2s ease;
@@ -197,16 +197,16 @@ async function changePassword() {
 }
 
 .field-block input:focus {
-  border-color: #4a90e2;
-  box-shadow: 0 0 0 3px rgba(74, 144, 226, 0.1);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
 }
 
 .primary-btn {
-  background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+  background: var(--primary);
   color: white;
   border: none;
-  border-radius: 10px;
-  padding: 14px 24px;
+  border-radius: var(--radius-md);
+  padding: var(--space-3) var(--space-6);
   font-size: 15px;
   font-weight: 500;
   cursor: pointer;
@@ -223,36 +223,36 @@ async function changePassword() {
 }
 
 .notice {
-  padding: 10px 14px;
-  border-radius: 10px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
   font-size: 14px;
-  margin: 12px 0;
+  margin: var(--space-3) 0;
 }
 
-.notice.error { background: #fef0f0; color: #e74c3c; }
-.notice.success { background: #f0f9f4; color: #27ae60; }
+.notice.error { background: var(--danger-soft); color: var(--danger); }
+.notice.success { background: var(--success-soft); color: var(--success); }
 
 .tips-section {
-  padding-top: 20px;
-  border-top: 1px solid #f0f2f7;
+  padding-top: var(--space-5);
+  border-top: 1px solid var(--line);
 }
 
 .tips-section h4 {
-  margin: 0 0 12px;
+  margin: 0 0 var(--space-3);
   font-size: 14px;
   font-weight: 600;
-  color: #1f2a44;
+  color: var(--text-primary);
 }
 
 .tips-section ul {
   margin: 0;
   padding-left: 20px;
   font-size: 13px;
-  color: #6b7a99;
+  color: var(--text-secondary);
   line-height: 1.8;
 }
 
 .tips-section li {
-  margin-bottom: 4px;
+  margin-bottom: var(--space-1);
 }
 </style>

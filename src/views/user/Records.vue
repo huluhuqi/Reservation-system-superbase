@@ -93,7 +93,7 @@ onMounted(() => {
 
 <style scoped>
 .records-page {
-  padding-bottom: 20px;
+  padding-bottom: var(--space-5);
 }
 
 .section-head {
@@ -107,36 +107,38 @@ onMounted(() => {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
+  color: var(--text-primary);
 }
 
 .secondary-btn {
-  background: #f0f4f9;
-  color: #1f2a44;
+  background: var(--hover);
+  color: var(--text-primary);
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 6px 12px;
   font-size: 13px;
   cursor: pointer;
 }
 
 .secondary-btn:disabled {
-  opacity: 0.6;
+  background: var(--disabled-soft);
+  color: var(--text-muted);
   cursor: not-allowed;
 }
 
 .record-list {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--space-2);
 }
 
 .record-card {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-3);
   padding: 14px;
-  background: #f7f9fd;
-  border-radius: 12px;
+  background: var(--bg);
+  border-radius: var(--radius-lg);
 }
 
 .record-main {
@@ -147,77 +149,77 @@ onMounted(() => {
 .record-title {
   font-size: 14px;
   font-weight: 500;
-  color: #1f2a44;
-  margin-bottom: 4px;
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
 }
 
 .record-sub {
   font-size: 12px;
-  color: #6b7a99;
+  color: var(--text-secondary);
   line-height: 1.6;
 }
 
 .record-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .status-badge {
   padding: 4px 10px;
-  border-radius: 20px;
+  border-radius: 999px;
   font-size: 12px;
   flex-shrink: 0;
 }
 
 .status-badge.success {
-  background: #f0f9f4;
-  color: #27ae60;
+  background: var(--success-soft);
+  color: var(--success);
 }
 
 .cancel-btn {
-  background: #fef0f0;
-  color: #e74c3c;
+  background: var(--danger-soft);
+  color: var(--danger);
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   padding: 6px 12px;
   font-size: 12px;
   cursor: pointer;
 }
 
 .cancel-btn:hover {
-  background: #fde8e8;
+  opacity: 0.8;
 }
 
 .cancel-btn:disabled {
-  opacity: 0.6;
+  background: var(--disabled-soft);
+  color: var(--text-muted);
   cursor: not-allowed;
 }
 
 .notice {
   padding: 10px 14px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   font-size: 14px;
-  margin: 10px 0;
+  margin: var(--space-2) 0;
 }
 
-.notice.error { background: #fef0f0; color: #e74c3c; }
-.notice.success { background: #f0f9f4; color: #27ae60; }
-.notice.loading { background: #f0f6ff; color: #4a90e2; }
+.notice.error { background: var(--danger-soft); color: var(--danger); }
+.notice.success { background: var(--success-soft); color: var(--success); }
+.notice.loading { background: var(--primary-soft); color: var(--primary); }
 
 .empty-text {
   text-align: center;
-  color: #9aa8c4;
+  color: var(--text-muted);
   padding: 30px 0;
   font-size: 14px;
 }
 
 .card-surface {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(10px);
-  border-radius: 16px;
+  background: var(--card);
+  border-radius: var(--radius-lg);
   padding: 18px;
-  box-shadow: 0 2px 12px rgba(31, 42, 68, 0.06);
+  box-shadow: var(--shadow-md);
   margin-bottom: 14px;
 }
 </style>

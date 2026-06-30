@@ -48,8 +48,10 @@ AS $$
 DECLARE
   v_hash TEXT;
 BEGIN
+  -- 注意：Supabase Auth 实际使用 $2a$ 前缀，不是 $2b$
+  -- 直接使用 pgcrypto 原生生成的 $2a$ 前缀即可
   v_hash := extensions.crypt(p_password, extensions.gen_salt('bf', 10));
-  RETURN REPLACE(v_hash, '$2a$', '$2b$');
+  RETURN v_hash;
 END;
 $$;
 GRANT EXECUTE ON FUNCTION public.supabase_crypt(TEXT) TO authenticated;
@@ -98,14 +100,15 @@ BEGIN
   );
 
   -- 2. 关键！插入 auth.identities（Supabase Auth 必须有这个记录才能登录）
+  -- 注意：email 是生成列，不能直接插入，它从 identity_data 中自动提取
   INSERT INTO auth.identities (
-    id, user_id, identity_data, provider,
-    last_sign_in_at, created_at, updated_at, email
+    id, provider_id, user_id, identity_data, provider,
+    last_sign_in_at, created_at, updated_at
   ) VALUES (
-    v_user_id, v_user_id,
+    v_user_id, v_email, v_user_id,
     jsonb_build_object('sub', v_user_id::text, 'email', v_email),
     'email',
-    now(), now(), now(), v_email
+    now(), now(), now()
   );
 
   -- 3. 同步到 public.users
@@ -184,14 +187,15 @@ BEGIN
       );
 
       -- 插入 auth.identities
+      -- 注意：email 是生成列，不能直接插入，它从 identity_data 中自动提取
       INSERT INTO auth.identities (
         id, user_id, identity_data, provider,
-        last_sign_in_at, created_at, updated_at, email
+        last_sign_in_at, created_at, updated_at
       ) VALUES (
         v_user_id, v_user_id,
         jsonb_build_object('sub', v_user_id::text, 'email', v_email),
         'email',
-        now(), now(), now(), v_email
+        now(), now(), now()
       );
 
       -- 同步到 public.users
@@ -281,17 +285,36 @@ BEGIN
       AND au.email LIKE '%@system.local'
   LOOP
     INSERT INTO auth.identities (
-      id, user_id, identity_data, provider,
-      last_sign_in_at, created_at, updated_at, email
+      id, provider_id, user_id, identity_data, provider,
+      last_sign_in_at, created_at, updated_at
     ) VALUES (
-      v_user.id, v_user.id,
+      v_user.id, v_user.email, v_user.id,
       jsonb_build_object('sub', v_user.id::text, 'email', v_user.email),
       'email',
-      now(), now(), now(), v_user.email
+      now(), now(), now()
     )
     ON CONFLICT (id) DO NOTHING;
   END LOOP;
 END $$;
 
--- 刷新 schema cache
+-- ============================================================
+-- 重置已有工号用户的密码（修复 $2a$/$2b$ 前缀问题）
+-- ============================================================
+DO $$
+DECLARE
+  v_user RECORD;
+  v_new_hash TEXT;
+BEGIN
+  FOR v_user IN 
+    SELECT id, email 
+    FROM auth.users 
+    WHERE email LIKE '%@system.local'
+  LOOP
+    v_new_hash := extensions.crypt('123456', extensions.gen_salt('bf', 10));
+    UPDATE auth.users 
+    SET encrypted_password = v_new_hash
+    WHERE id = v_user.id;
+  END LOOP;
+END $$;
+
 NOTIFY pgrst, 'reload schema';

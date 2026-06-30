@@ -193,21 +193,21 @@ function handleGoToAdmin() {
 
 <style scoped>
 .account-page {
-  padding-bottom: 20px;
+  padding-bottom: var(--space-5);
 }
 
 .profile-card {
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 24px;
+  gap: var(--space-4);
+  padding: var(--space-6);
 }
 
 .avatar {
   width: 60px;
   height: 60px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
   color: white;
   display: flex;
   align-items: center;
@@ -225,28 +225,28 @@ function handleGoToAdmin() {
 .user-name {
   font-size: 18px;
   font-weight: 600;
-  color: #1f2a44;
-  margin-bottom: 4px;
+  color: var(--text-primary);
+  margin-bottom: var(--space-1);
 }
 
 .user-no {
   font-size: 13px;
-  color: #6b7a99;
+  color: var(--text-secondary);
 }
 
 .admin-badge {
   padding: 6px 12px;
-  background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+  background: var(--warning);
   color: white;
   border: none;
-  border-radius: 20px;
+  border-radius: 999px;
   font-size: 12px;
   cursor: pointer;
   flex-shrink: 0;
 }
 
 .menu-card {
-  padding: 8px;
+  padding: var(--space-2);
 }
 
 .menu-item {
@@ -257,14 +257,14 @@ function handleGoToAdmin() {
   padding: 14px 12px;
   background: transparent;
   border: none;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   cursor: pointer;
   text-align: left;
   transition: background 0.2s ease;
 }
 
 .menu-item:hover {
-  background: #f7f9fd;
+  background: var(--hover);
 }
 
 .menu-icon {
@@ -277,36 +277,35 @@ function handleGoToAdmin() {
 .menu-label {
   flex: 1;
   font-size: 15px;
-  color: #1f2a44;
+  color: var(--text-primary);
 }
 
 .menu-arrow {
   font-size: 18px;
-  color: #c0c8d4;
+  color: var(--text-muted);
 }
 
 .menu-item.danger .menu-label {
-  color: #e74c3c;
+  color: var(--danger);
 }
 
 .about-section {
   text-align: center;
   padding: 30px 20px;
-  color: #9aa8c4;
+  color: var(--text-muted);
   font-size: 12px;
   line-height: 1.8;
 }
 
 .about-section p {
-  margin: 4px 0;
+  margin: var(--space-1) 0;
 }
 
 .card-surface {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(10px);
-  border-radius: 16px;
+  background: var(--card);
+  border-radius: var(--radius-lg);
   padding: 18px;
-  box-shadow: 0 2px 12px rgba(31, 42, 68, 0.06);
+  box-shadow: var(--shadow-md);
   margin-bottom: 14px;
 }
 
@@ -321,27 +320,27 @@ function handleGoToAdmin() {
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  padding: 20px;
+  padding: var(--space-5);
 }
 
 .modal-box {
-  background: white;
-  border-radius: 16px;
-  padding: 24px;
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
   width: 100%;
   max-width: 400px;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-md);
 }
 
 .modal-box h3 {
-  margin: 0 0 20px;
+  margin: 0 0 var(--space-5);
   font-size: 18px;
   font-weight: 600;
-  color: #1f2a44;
+  color: var(--text-primary);
 }
 
 .form-group {
-  margin-bottom: 16px;
+  margin-bottom: var(--space-4);
 }
 
 .form-group label {
@@ -349,14 +348,14 @@ function handleGoToAdmin() {
   margin-bottom: 6px;
   font-size: 13px;
   font-weight: 500;
-  color: #4a5568;
+  color: var(--text-secondary);
 }
 
 .form-group input {
   width: 100%;
   padding: 10px 12px;
-  border: 2px solid #e2e8f0;
-  border-radius: 8px;
+  border: 2px solid var(--line);
+  border-radius: var(--radius-sm);
   font-size: 14px;
   box-sizing: border-box;
   outline: none;
@@ -364,20 +363,20 @@ function handleGoToAdmin() {
 }
 
 .form-group input:focus {
-  border-color: #4a90e2;
+  border-color: var(--primary);
 }
 
 .modal-actions {
   display: flex;
-  gap: 10px;
+  gap: var(--space-2);
   justify-content: flex-end;
-  margin-top: 20px;
+  margin-top: var(--space-5);
 }
 
 .primary-btn,
 .secondary-btn {
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 10px 20px;
   font-size: 14px;
   cursor: pointer;
@@ -385,42 +384,42 @@ function handleGoToAdmin() {
 }
 
 .primary-btn {
-  background: #4a90e2;
+  background: var(--primary);
   color: white;
 }
 
 .primary-btn:hover:not(:disabled) {
-  background: #357abd;
+  background: var(--primary-hover);
 }
 
 .primary-btn:disabled {
-  opacity: 0.6;
+  background: var(--disabled);
   cursor: not-allowed;
 }
 
 .secondary-btn {
-  background: #f0f4f9;
-  color: #1f2a44;
+  background: var(--hover);
+  color: var(--text-primary);
 }
 
 .secondary-btn:hover {
-  background: #e2e8f0;
+  background: var(--line);
 }
 
 .notice {
   padding: 10px 14px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   font-size: 14px;
-  margin-bottom: 12px;
+  margin-bottom: var(--space-3);
 }
 
 .notice.error {
-  background: #fef0f0;
-  color: #e74c3c;
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 
 .notice.success {
-  background: #e8f5e9;
-  color: #27ae60;
+  background: var(--success-soft);
+  color: var(--success);
 }
 </style>

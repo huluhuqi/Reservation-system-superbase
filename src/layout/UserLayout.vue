@@ -16,7 +16,7 @@
 .user-layout {
   min-height: 100vh;
   padding-bottom: 60px;
-  background: #f5f7fa;
+  background: var(--bg);
 }
 
 .tabbar {
@@ -26,8 +26,8 @@
   right: 0;
   height: 56px;
   display: flex;
-  background: white;
-  border-top: 1px solid #e8ecf3;
+  background: var(--card);
+  border-top: 1px solid var(--line);
   z-index: 100;
 }
 
@@ -36,12 +36,12 @@
   border: none;
   background: none;
   font-size: 14px;
-  color: #6b7a99;
+  color: var(--text-secondary);
   cursor: pointer;
   transition: color 0.2s;
 }
 
 .tabbar button:hover {
-  color: #4a90e2;
+  color: var(--primary);
 }
 </style>
