@@ -138,21 +138,21 @@ onMounted(() => {
   <div class="admin-page">
     <div class="stats-grid">
       <div class="stat-card">
-        <div class="stat-icon">📊</div>
+        <div class="stat-icon">&#x1F4CA;</div>
         <div class="stat-info">
           <div class="stat-value">{{ riskStats.totalBookings }}</div>
           <div class="stat-label">总预约数</div>
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon">👥</div>
+        <div class="stat-icon">&#x1F465;</div>
         <div class="stat-info">
           <div class="stat-value">{{ riskStats.totalUsers }}</div>
           <div class="stat-label">注册用户</div>
         </div>
       </div>
       <div class="stat-card warning">
-        <div class="stat-icon">⚠️</div>
+        <div class="stat-icon">&#x26A0;&#xFE0F;</div>
         <div class="stat-info">
           <div class="stat-value">{{ riskStats.highRiskUsers.length }}</div>
           <div class="stat-label">高风险用户</div>
@@ -161,6 +161,7 @@ onMounted(() => {
     </div>
 
     <p v-if="errorMessage" class="notice error">{{ errorMessage }}</p>
+    <p v-if="successMessage" class="notice success">{{ successMessage }}</p>
 
     <div class="panel-card">
       <div class="panel-header">
@@ -187,8 +188,6 @@ onMounted(() => {
       </div>
     </div>
 
-    <p v-if="successMessage" class="notice success">{{ successMessage }}</p>
-
     <div class="panel-card">
       <div class="panel-header">
         <h3>风控规则配置</h3>
@@ -199,7 +198,7 @@ onMounted(() => {
             <div class="rule-name">{{ rule.name }}</div>
             <div class="rule-desc">
               <template v-if="rule.time_window">
-                {{ rule.time_window }}{{ rule.time_unit || '分钟' }}内 
+                {{ rule.time_window }}{{ rule.time_unit || '分钟' }}内
               </template>
               阈值：{{ rule.value }}{{ rule.unit || '次' }}
             </div>
@@ -216,7 +215,6 @@ onMounted(() => {
       <p class="hint-text">提示：点击"编辑"可自定义风控阈值，配置自动保存到本地</p>
     </div>
 
-    <!-- 编辑阈值弹窗 -->
     <div v-if="showEditModal" class="modal-overlay" @click.self="closeEditModal">
       <div class="modal">
         <div class="modal-header">
@@ -509,7 +507,6 @@ onMounted(() => {
   font-size: 12px;
 }
 
-/* 模态框 */
 .modal-overlay {
   position: fixed;
   top: 0;
