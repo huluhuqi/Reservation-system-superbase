@@ -294,14 +294,16 @@ async function loadAvailability() {
   }
 }
 
-async function loadSlots() {
+async function loadSlots(skipReset = false) {
   if (!selectedInstrumentId.value || !selectedDate.value) {
     slots.value = []
     return
   }
 
   loading.value = true
-  resetMessages()
+  if (!skipReset) {
+    resetMessages()
+  }
   handleClearSelectedSlots()
 
   const maxAdvanceDays = Number(systemSettings.value?.booking_advance_days || 7)
@@ -493,7 +495,7 @@ async function handleReserveSelectedSlots() {
       errorMessage.value = `预约失败：${failCount} 个时段均已被预约，请重新选择。`
     }
 
-    await loadSlots()
+    await loadSlots(true)
     await loadAvailability()
   } catch (e) {
     errorMessage.value = e.message || '预约失败'
@@ -531,7 +533,7 @@ async function handleCancelSelectedSlots() {
     }
 
     successMessage.value = `取消完成：已取消 ${cancelledCount} 个时段。`
-    await loadSlots()
+    await loadSlots(true)
     await loadAvailability()
   } catch (e) {
     errorMessage.value = e.message || '取消预约失败'
