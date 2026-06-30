@@ -118,6 +118,11 @@ async function handleDelete(role) {
   }
 }
 
+function isImageUrl(url) {
+  if (!url) return false
+  return /^https?:\/\/.+\.(png|jpg|jpeg|gif|svg|webp)$/i.test(url)
+}
+
 function toggleCategory(categoryId) {
   const idx = selectedCategoryIds.value.indexOf(categoryId)
   if (idx === -1) {
