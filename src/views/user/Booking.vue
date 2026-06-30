@@ -610,7 +610,6 @@ onMounted(async () => {
       </div>
       <div v-else class="availability-list">
         <div v-for="item in instruments" :key="item.id" class="availability-row">
-          <div class="avail-thumb" :class="availabilityMap[item.id]?.status || 'free'"></div>
           <div class="avail-main">
             <div class="avail-title">{{ item.instrument_name }}</div>
             <div class="avail-sub">
@@ -618,8 +617,11 @@ onMounted(async () => {
               {{ availabilityMap[item.id]?.label || '可用' }}
             </div>
           </div>
-          <div class="avail-count">
-            {{ availabilityMap[item.id]?.freeCount ?? 0 }}/{{ availabilityMap[item.id]?.totalCount ?? 0 }}
+          <div class="avail-right">
+            <div class="avail-count">
+              {{ availabilityMap[item.id]?.freeCount ?? 0 }}/{{ availabilityMap[item.id]?.totalCount ?? 0 }}
+            </div>
+            <div v-if="item.description" class="avail-desc">备注：{{ item.description }}</div>
           </div>
         </div>
       </div>
@@ -1187,17 +1189,6 @@ onMounted(async () => {
   background: rgba(255, 255, 255, 0.6);
 }
 
-.avail-thumb {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.avail-thumb.free { background: #27ae60; }
-.avail-thumb.partial { background: #f39c12; }
-.avail-thumb.busy { background: #95a5a6; }
-
 .avail-main {
   flex: 1;
 }
@@ -1217,9 +1208,26 @@ onMounted(async () => {
   gap: 6px;
 }
 
+.avail-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
 .avail-count {
   font-size: 14px;
   font-weight: 600;
   color: #4a90e2;
+}
+
+.avail-desc {
+  font-size: 11px;
+  color: #8a9ab5;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 </style>
