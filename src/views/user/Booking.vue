@@ -445,6 +445,7 @@ async function handleReserveSelectedSlots() {
       errorMessage.value = '所选时段中包含已过期的时段，请重新选择'
       return
     }
+
     const existingBookings = await BookingAPI.getByDate(
       selectedDate.value, selectedInstrumentId.value, selectedCategoryId.value
     )
@@ -459,20 +460,39 @@ async function handleReserveSelectedSlots() {
       return
     }
 
-    const bookingsData = slotsToCreate.map(slot => ({
-      booking_date: selectedDate.value,
-      instrument_id: selectedInstrumentId.value,
-      instrument_name: selectedInstrumentName.value,
-      slot_start: slot.slot_start,
-      slot_end: slot.slot_end,
-      slot_index: slot.slot_index,
-      booking_remark: remark.value,
-      category_id: selectedCategoryId.value
-    }))
+    let successCount = 0
+    let failCount = 0
+    const failedSlots = []
 
-    const results = await BookingAPI.createBatch(bookingsData)
+    for (const slot of slotsToCreate) {
+      const bookingData = {
+        booking_date: selectedDate.value,
+        instrument_id: selectedInstrumentId.value,
+        instrument_name: selectedInstrumentName.value,
+        slot_start: slot.slot_start,
+        slot_end: slot.slot_end,
+        slot_index: slot.slot_index,
+        booking_remark: remark.value,
+        category_id: selectedCategoryId.value
+      }
 
-    successMessage.value = `预约成功：已预约 ${results.length} 个时段。`
+      const result = await BookingAPI.createOne(bookingData)
+      if (result.success) {
+        successCount++
+      } else {
+        failCount++
+        failedSlots.push(`${slot.slot_start}-${slot.slot_end}`)
+      }
+    }
+
+    if (successCount > 0 && failCount === 0) {
+      successMessage.value = `预约成功：已预约 ${successCount} 个时段。`
+    } else if (successCount > 0 && failCount > 0) {
+      successMessage.value = `部分预约成功：${successCount} 个时段预约成功，${failCount} 个时段预约失败（${failedSlots.join('、')}）。`
+    } else if (successCount === 0 && failCount > 0) {
+      errorMessage.value = `预约失败：${failCount} 个时段均已被预约，请重新选择。`
+    }
+
     await loadSlots()
     await loadAvailability()
   } catch (e) {

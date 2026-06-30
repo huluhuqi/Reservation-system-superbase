@@ -101,6 +101,35 @@ export const BookingAPI = {
     return (data || []).map(normalizeBooking)
   },
 
+  createOne: async (item) => {
+    const user = getCurrentUser()
+    const insertData = {
+      user_id: user?.id,
+      user_name: user?.user_name || '',
+      user_email: user?.email || '',
+      instrument_id: item.instrument_id,
+      instrument_name: item.instrument_name || '',
+      category_id: item.category_id,
+      booking_date: item.booking_date,
+      slot_start: item.slot_start,
+      slot_end: item.slot_end,
+      slot_index: item.slot_index ?? 0,
+      status: item.status || 'pending',
+      remark: item.remark || item.booking_remark || ''
+    }
+    const { data, error } = await supabase
+      .from('booking')
+      .insert(insertData)
+      .select()
+      .single()
+    if (error) {
+      const errMsg = error.message || ''
+      const isConflict = errMsg.includes('duplicate') || errMsg.includes('unique') || error.code === '23505'
+      return { success: false, isConflict, error: errMsg }
+    }
+    return { success: true, data: normalizeBooking(data) }
+  },
+
   update: async (id, payload) => {
     const updateData = {}
     if (payload.status !== undefined) updateData.status = payload.status
