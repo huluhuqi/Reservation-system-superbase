@@ -64,6 +64,29 @@ export const UserAPI = {
     return data
   },
 
+  createUserWithRole: async (employeeNo, username, password = '123456', roleId = null) => {
+    // 先用rpc创建用户
+    const result = await UserAPI.createUser(employeeNo, username, password, 'user')
+    
+    // 如果指定了role_id，更新用户的role_id
+    if (roleId) {
+      // 获取刚创建的用户
+      const { data: users, error: findError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('employee_no', employeeNo)
+        .single()
+      
+      if (!findError && users) {
+        await supabase
+          .from('users')
+          .update({ role_id: roleId })
+          .eq('id', users.id)
+      }
+    }
+    return result
+  },
+
   batchCreateUsers: async (users) => {
     const { data, error } = await supabase
       .rpc('admin_batch_create_users', {

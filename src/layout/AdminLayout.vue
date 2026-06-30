@@ -10,6 +10,7 @@
         <button @click="$router.push('/admin/timeslot')">⏰ 时段设置</button>
         <button @click="$router.push('/admin/lock')">🔒 锁定管理</button>
         <button @click="$router.push('/admin/user')">👥 用户管理</button>
+        <button @click="$router.push('/admin/role')">🎭 角色管理</button>
         <button @click="$router.push('/admin/risk')">⚠️ 风险预警</button>
         <button @click="$router.push('/admin/password')">🔑 密码设置</button>
       </div>

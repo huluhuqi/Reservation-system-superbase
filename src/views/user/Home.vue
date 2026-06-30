@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { CategoryAPI, InstrumentAPI, BookingAPI, TimeSlotAPI, UserAPI } from '@/api'
+import { CategoryAPI, InstrumentAPI, BookingAPI, TimeSlotAPI, UserAPI, RoleAPI } from '@/api'
 import { getTodayDate, formatDateText } from '../../utils/date.js'
 
 function getUser() {
@@ -15,7 +15,8 @@ function getUser() {
 
 const router = useRouter()
 const loading = ref(false)
-const categories = ref([])
+const allCategories = ref([])
+const filteredCategories = ref([])
 const instruments = ref([])
 const selectedCategory = ref(null)
 const availabilityMap = ref({})
@@ -40,7 +41,29 @@ const overviewList = computed(() => {
 
 async function loadCategories() {
   try {
-    categories.value = await CategoryAPI.list()
+    allCategories.value = await CategoryAPI.list()
+    
+    // 根据用户角色过滤可预约的类别
+    const user = getUser()
+    if (!user) {
+      filteredCategories.value = allCategories.value
+      return
+    }
+
+    try {
+      const roleInfo = await RoleAPI.getUserAccessibleCategories(user.id)
+      
+      if (roleInfo && !roleInfo.can_booking_all && roleInfo.category_ids) {
+        filteredCategories.value = allCategories.value.filter(
+          cat => roleInfo.category_ids.includes(cat.id)
+        )
+      } else {
+        filteredCategories.value = allCategories.value
+      }
+    } catch (e) {
+      console.warn('获取用户角色信息失败，显示全部类别', e)
+      filteredCategories.value = allCategories.value
+    }
   } catch (e) {
     console.error('加载类别失败', e)
   }
@@ -193,7 +216,7 @@ onMounted(async () => {
       <div class="category-scroll">
         <div class="category-track">
           <button
-            v-for="cat in categories"
+            v-for="cat in filteredCategories"
             :key="cat.id"
             class="category-card"
             :class="{ active: selectedCategory?.id === cat.id }"

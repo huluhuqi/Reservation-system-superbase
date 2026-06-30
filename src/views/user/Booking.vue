@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, computed, watch } from 'vue'
-import { CategoryAPI, InstrumentAPI, BookingAPI, TimeSlotAPI, UserAPI } from '@/api'
+import { CategoryAPI, InstrumentAPI, BookingAPI, TimeSlotAPI, UserAPI, RoleAPI } from '@/api'
 import { formatDate, getTodayDate, getDateLabel, formatDateText } from '../../utils/date.js'
 
 function getUser() {
@@ -17,7 +17,8 @@ const operating = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
 
-const categories = ref([])
+const allCategories = ref([])
+const filteredCategories = ref([])
 const selectedCategoryId = ref('')
 const selectedCategoryName = ref('')
 const selectedCategoryIcon = ref('')
@@ -176,7 +177,33 @@ function getSlotPersonName(slot) {
 
 async function loadCategories() {
   try {
-    categories.value = await CategoryAPI.list()
+    allCategories.value = await CategoryAPI.list()
+    
+    // 根据用户角色过滤可预约的类别
+    const user = getUser()
+    if (!user) {
+      filteredCategories.value = allCategories.value
+      return
+    }
+
+    try {
+      // 获取用户的角色信息
+      const roleInfo = await RoleAPI.getUserAccessibleCategories(user.id)
+      
+      if (roleInfo && !roleInfo.can_booking_all && roleInfo.category_ids) {
+        // 如果角色设置了可预约类别限制，则过滤
+        filteredCategories.value = allCategories.value.filter(
+          cat => roleInfo.category_ids.includes(cat.id)
+        )
+      } else {
+        // 如果角色可以预约全部类别，或者没有设置角色，则显示全部
+        filteredCategories.value = allCategories.value
+      }
+    } catch (e) {
+      // 如果获取角色信息失败，显示全部类别
+      console.warn('获取用户角色信息失败，显示全部类别', e)
+      filteredCategories.value = allCategories.value
+    }
   } catch (e) {
     console.error('加载类别失败', e)
   }
@@ -604,9 +631,12 @@ onMounted(async () => {
       <div class="section-head">
         <h3>选择类别</h3>
       </div>
-      <div class="category-list">
+      <div v-if="filteredCategories.length === 0" class="empty-text">
+        暂无可预约的类别
+      </div>
+      <div v-else class="category-list">
         <button
-          v-for="cat in categories"
+          v-for="cat in filteredCategories"
           :key="cat.id"
           class="category-card"
           :class="{ active: selectedCategoryId === cat.id }"

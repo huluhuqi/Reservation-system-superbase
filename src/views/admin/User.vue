@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { UserAPI } from '@/api'
+import { UserAPI, RoleAPI } from '@/api'
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -8,6 +8,7 @@ const errorMessage = ref('')
 const successMessage = ref('')
 
 const users = ref([])
+const roles = ref([])
 const selectedUserIds = ref([])
 const showAddModal = ref(false)
 const showBatchModal = ref(false)
@@ -15,7 +16,7 @@ const showBatchModal = ref(false)
 const newUser = ref({
   employee_no: '',
   username: '',
-  role: 'user'
+  role_id: ''
 })
 
 const batchText = ref('')
@@ -32,6 +33,7 @@ async function loadUsers() {
   errorMessage.value = ''
   try {
     users.value = await UserAPI.listUsers()
+    roles.value = await RoleAPI.getAll()
     selectedUserIds.value = []
   } catch (e) {
     errorMessage.value = e.message || '加载用户失败'
@@ -40,8 +42,23 @@ async function loadUsers() {
   }
 }
 
-function getRoleBadgeClass(role) {
-  return role === 'admin' ? 'badge-admin' : 'badge-user'
+function getRoleName(roleId) {
+  const role = roles.value.find(r => r.id === roleId)
+  return role ? role.role_name : (roleId ? '未知角色' : '普通用户')
+}
+
+function getRoleBadgeClass(roleId) {
+  const role = roles.value.find(r => r.id === roleId)
+  if (!role) return 'badge-user'
+  return role.can_booking_all ? 'badge-user' : 'badge-custom'
+}
+
+function getUserRoleType(user) {
+  // 如果有role_id，说明是自定义角色
+  if (user.role_id) return 'custom'
+  // 如果是admin角色
+  if (user.role === 'admin') return 'admin'
+  return 'user'
 }
 
 function formatDate(dateStr) {
@@ -68,8 +85,8 @@ function toggleSelectAll() {
   }
 }
 
-function openAddModal() {
-  newUser.value = { employee_no: '', username: '', role: 'user' }
+async function openAddModal() {
+  newUser.value = { employee_no: '', username: '', role_id: '' }
   errorMessage.value = ''
   successMessage.value = ''
   showAddModal.value = true
@@ -88,11 +105,11 @@ async function handleAddUser() {
   submitting.value = true
   errorMessage.value = ''
   try {
-    await UserAPI.createUser(
+    await UserAPI.createUserWithRole(
       newUser.value.employee_no.trim(),
       newUser.value.username.trim(),
       '123456',
-      newUser.value.role
+      newUser.value.role_id || null
     )
     successMessage.value = '创建成功，默认密码：123456'
     showAddModal.value = false
@@ -241,8 +258,8 @@ onMounted(() => {
             <div class="col-no">{{ user.employee_no || '-' }}</div>
             <div class="col-name">{{ user.username || '-' }}</div>
             <div class="col-role">
-              <span class="badge" :class="getRoleBadgeClass(user.role)">
-                {{ user.role === 'admin' ? '管理员' : '普通用户' }}
+              <span class="badge" :class="getRoleBadgeClass(user.role_id)">
+                {{ getRoleName(user.role_id) }}
               </span>
             </div>
             <div class="col-date">{{ formatDate(user.created_at) }}</div>
@@ -286,9 +303,11 @@ onMounted(() => {
         </div>
         <div class="form-group">
           <label>角色</label>
-          <select v-model="newUser.role">
-            <option value="user">普通用户</option>
-            <option value="admin">管理员</option>
+          <select v-model="newUser.role_id">
+            <option value="">普通用户（可预约全部）</option>
+            <option v-for="role in roles" :key="role.id" :value="role.id">
+              {{ role.role_name }}{{ role.can_booking_all ? '（可预约全部）' : '（部分类别）' }}
+            </option>
           </select>
         </div>
         <div class="form-tip">默认密码：123456</div>
@@ -519,6 +538,11 @@ onMounted(() => {
 .badge-admin {
   background: var(--warning-soft);
   color: var(--warning);
+}
+
+.badge-custom {
+  background: var(--success-soft);
+  color: var(--success);
 }
 
 .link-btn {

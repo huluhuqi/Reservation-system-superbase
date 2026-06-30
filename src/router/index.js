@@ -70,6 +70,10 @@ const router = createRouter({
           component: () => import('../views/admin/Risk.vue')
         },
         {
+          path: 'role',
+          component: () => import('../views/admin/Role.vue')
+        },
+        {
           path: 'password',
           component: () => import('../views/admin/Password.vue')
         }
