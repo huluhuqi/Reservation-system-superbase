@@ -157,18 +157,22 @@ onMounted(async () => {
       <h3>预约规则</h3>
       <div class="rule-row">
         <div class="field-block">
-          <label>可预约最大天数</label>
+          <label>可预约未来天数</label>
           <select v-model.number="bookingAdvanceDays">
-            <option :value="1">当日</option>
+            <option :value="0">仅当天</option>
+            <option :value="1">1天</option>
             <option :value="2">2天</option>
             <option :value="3">3天</option>
             <option :value="5">5天</option>
             <option :value="7">7天</option>
+            <option :value="14">14天</option>
           </select>
+          <p class="field-tip">当天始终可预约</p>
         </div>
         <div class="field-block">
           <label>开放预约时间</label>
           <input v-model="bookingOpenTime" type="time" />
+          <p class="field-tip">每天此时间后开放未来天数预约</p>
         </div>
       </div>
     </div>
@@ -299,6 +303,12 @@ onMounted(async () => {
   font-size: 14px;
   outline: none;
   min-width: 140px;
+}
+
+.field-tip {
+  margin: 0;
+  font-size: 12px;
+  color: #8a9ab5;
 }
 
 .card-header {

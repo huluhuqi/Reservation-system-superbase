@@ -38,8 +38,17 @@ const userInfo = computed(() => getUser())
 
 const quickDateOptions = computed(() => {
   const maxAdvanceDays = Number(systemSettings.value?.booking_advance_days || 7)
+  const bookingOpenTime = systemSettings.value?.booking_open_time || '09:00'
+  const now = new Date()
+  const openHour = parseInt(bookingOpenTime.split(':')[0])
+  const openMinute = parseInt(bookingOpenTime.split(':')[1])
+  const currentMinutes = now.getHours() * 60 + now.getMinutes()
+  const openMinutes = openHour * 60 + openMinute
+  const isOpen = currentMinutes >= openMinutes
 
-  return Array.from({ length: maxAdvanceDays }, (_, dayDiff) => {
+  const dayCount = 1 + maxAdvanceDays
+
+  return Array.from({ length: dayCount }, (_, dayDiff) => {
     const date = new Date()
     date.setDate(date.getDate() + dayDiff)
     const value = formatDate(date)
@@ -49,7 +58,14 @@ const quickDateOptions = computed(() => {
     if (dayDiff === 1) title = '明天'
     if (dayDiff === 2) title = '后天'
 
-    return { key: `day-${dayDiff}`, value, title, ...label }
+    let disabled = false
+    let disabledReason = ''
+    if (dayDiff > 0 && !isOpen) {
+      disabled = true
+      disabledReason = `${bookingOpenTime} 开放预约`
+    }
+
+    return { key: `day-${dayDiff}`, value, title, disabled, disabledReason, ...label }
   })
 })
 
@@ -267,15 +283,6 @@ async function loadSlots() {
   const currentMinutes = now.getHours() * 60 + now.getMinutes()
   const openMinutes = openHour * 60 + openMinute
 
-  const maxAllowedDayDiff = maxAdvanceDays - 1
-
-  if (dayDiff > maxAllowedDayDiff) {
-    errorMessage.value = `仅可预约 ${maxAdvanceDays} 天内的日期`
-    slots.value = []
-    loading.value = false
-    return
-  }
-
   if (dayDiff < 0) {
     errorMessage.value = '不能预约历史日期'
     slots.value = []
@@ -283,8 +290,23 @@ async function loadSlots() {
     return
   }
 
+  if (dayDiff > maxAdvanceDays) {
+    errorMessage.value = `仅可预约未来 ${maxAdvanceDays} 天内的日期`
+    slots.value = []
+    loading.value = false
+    return
+  }
+
   const isToday = dayDiff === 0
-  const isBeforeOpenTime = isToday && currentMinutes < openMinutes
+  const isFutureDay = dayDiff > 0
+  const isBeforeOpenTime = currentMinutes < openMinutes
+
+  if (isFutureDay && isBeforeOpenTime) {
+    errorMessage.value = `未来日期预约每天 ${bookingOpenTime} 开放，请稍后再试`
+    slots.value = []
+    loading.value = false
+    return
+  }
 
   try {
     const baseSlots = customSlots.value.map((slot) => ({
@@ -315,10 +337,6 @@ async function loadSlots() {
         const slotHour = parseInt(slot.slot_start.split(':')[0])
         const slotMinute = parseInt(slot.slot_start.split(':')[1])
         const slotMinutes = slotHour * 60 + slotMinute
-
-        if (isBeforeOpenTime) {
-          return { ...slot, status: 'expired', text: '未到开放时间' }
-        }
 
         if (currentMinutes >= slotMinutes) {
           return { ...slot, status: 'expired', text: '已过期' }
@@ -367,20 +385,19 @@ async function handleReserveSelectedSlots() {
   const openMinute = parseInt(bookingOpenTime.split(':')[1])
   const currentMinutes = now.getHours() * 60 + now.getMinutes()
   const openMinutes = openHour * 60 + openMinute
-  const maxAllowedDayDiff = maxAdvanceDays - 1
 
-  if (dayDiff > maxAllowedDayDiff) {
-    errorMessage.value = `仅可预约 ${maxAdvanceDays} 天内的日期`
-    return
-  }
   if (dayDiff < 0) {
     errorMessage.value = '不能预约历史日期'
     return
   }
 
-  const isToday = dayDiff === 0
-  if (isToday && currentMinutes < openMinutes) {
-    errorMessage.value = `未到开放预约时间（${bookingOpenTime}）`
+  if (dayDiff > maxAdvanceDays) {
+    errorMessage.value = `仅可预约未来 ${maxAdvanceDays} 天内的日期`
+    return
+  }
+
+  if (dayDiff > 0 && currentMinutes < openMinutes) {
+    errorMessage.value = `未来日期预约每天 ${bookingOpenTime} 开放，请稍后再试`
     return
   }
 
@@ -581,13 +598,16 @@ onMounted(async () => {
           v-for="item in quickDateOptions"
           :key="item.key"
           class="date-chip"
-          :class="{ active: selectedDate === item.value }"
+          :class="{ active: selectedDate === item.value, disabled: item.disabled }"
           type="button"
-          @click="selectedDate = item.value"
+          :disabled="item.disabled"
+          :title="item.disabledReason || ''"
+          @click="!item.disabled && (selectedDate = item.value)"
         >
           <div class="chip-title">{{ item.title }}</div>
           <div class="chip-date">{{ item.monthDay }}</div>
           <div class="chip-week">{{ item.weekday }}</div>
+          <div v-if="item.disabled" class="chip-lock">{{ item.disabledReason }}</div>
         </button>
       </div>
     </div>
@@ -849,6 +869,17 @@ onMounted(async () => {
   background: #f0f6ff;
 }
 
+.date-chip.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: #f0f0f0;
+}
+
+.date-chip.disabled:hover {
+  border-color: transparent;
+  background: #f0f0f0;
+}
+
 .chip-title {
   font-size: 12px;
   color: #6b7a99;
@@ -865,6 +896,13 @@ onMounted(async () => {
   font-size: 12px;
   color: #8a9ab5;
   margin-top: 2px;
+}
+
+.chip-lock {
+  font-size: 10px;
+  color: #f39c12;
+  margin-top: 4px;
+  font-weight: 500;
 }
 
 .legend-row {
