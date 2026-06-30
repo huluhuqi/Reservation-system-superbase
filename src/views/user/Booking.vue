@@ -34,6 +34,32 @@ const categoryCustomSlots = ref([])
 
 const remark = ref('')
 
+const BOOKING_STATE_KEY = 'booking_selected_state'
+
+function saveBookingState() {
+  try {
+    localStorage.setItem(BOOKING_STATE_KEY, JSON.stringify({
+      categoryId: selectedCategoryId.value,
+      categoryName: selectedCategoryName.value,
+      categoryIcon: selectedCategoryIcon.value,
+      instrumentId: selectedInstrumentId.value,
+      date: selectedDate.value
+    }))
+  } catch (e) {
+    console.warn('保存预约状态失败', e)
+  }
+}
+
+function loadBookingState() {
+  try {
+    const raw = localStorage.getItem(BOOKING_STATE_KEY)
+    if (raw) return JSON.parse(raw)
+  } catch (e) {
+    console.warn('读取预约状态失败', e)
+  }
+  return null
+}
+
 const userInfo = computed(() => getUser())
 
 const quickDateOptions = computed(() => {
@@ -160,6 +186,7 @@ async function handleSelectCategory(category) {
   selectedCategoryId.value = category.id
   selectedCategoryName.value = category.category_name
   selectedCategoryIcon.value = category.category_icon
+  saveBookingState()
 
   try {
     const catSettings = await CategoryAPI.getSettings(category.id)
@@ -180,9 +207,17 @@ function isImageUrl(url) {
 async function loadInstruments() {
   if (!selectedCategoryId.value) return
   try {
+    const savedState = loadBookingState()
     instruments.value = await InstrumentAPI.list(selectedCategoryId.value)
     if (instruments.value.length > 0) {
-      selectedInstrumentId.value = instruments.value[0].id
+      const savedInstrument = savedState?.instrumentId
+        && instruments.value.find(i => i.id === savedState.instrumentId)
+      if (savedInstrument) {
+        selectedInstrumentId.value = savedInstrument.id
+      } else {
+        selectedInstrumentId.value = instruments.value[0].id
+      }
+      saveBookingState()
     }
   } catch (e) {
     console.error('加载仪器失败', e)
@@ -488,6 +523,7 @@ async function handleCancelSelectedSlots() {
 }
 
 watch([selectedDate, selectedInstrumentId], async () => {
+  saveBookingState()
   if (selectedInstrumentId.value) {
     await loadSlots()
   }
@@ -501,7 +537,33 @@ onMounted(async () => {
   try {
     systemSettings.value = await UserAPI.getSettings()
     await loadCategories()
-    
+
+    const savedState = loadBookingState()
+    const maxAdvanceDays = Number(systemSettings.value?.booking_advance_days || 7)
+    const today = getTodayDate()
+
+    let savedDateValid = false
+    if (savedState?.date) {
+      const savedDateObj = new Date(savedState.date)
+      const todayObj = new Date(today)
+      savedDateObj.setHours(0, 0, 0, 0)
+      todayObj.setHours(0, 0, 0, 0)
+      const diffDays = Math.floor((savedDateObj - todayObj) / (1000 * 60 * 60 * 24))
+      if (diffDays >= 0 && diffDays <= maxAdvanceDays) {
+        selectedDate.value = savedState.date
+        savedDateValid = true
+      }
+    }
+
+    if (savedState?.categoryId) {
+      const savedCategory = categories.value.find(c => c.id === savedState.categoryId)
+      if (savedCategory) {
+        await handleSelectCategory(savedCategory)
+        loading.value = false
+        return
+      }
+    }
+
     if (categories.value.length > 0) {
       await handleSelectCategory(categories.value[0])
     }
@@ -781,12 +843,25 @@ onMounted(async () => {
 }
 
 .instrument-list {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  display: flex;
   gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.instrument-list::-webkit-scrollbar {
+  height: 4px;
+}
+
+.instrument-list::-webkit-scrollbar-thumb {
+  background: #d0d7e3;
+  border-radius: 2px;
 }
 
 .instrument-card {
+  flex-shrink: 0;
+  min-width: 140px;
   padding: 14px;
   background: #f7f9fd;
   border: 2px solid transparent;
@@ -930,6 +1005,19 @@ onMounted(async () => {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 8px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding-right: 4px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.slot-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.slot-list::-webkit-scrollbar-thumb {
+  background: #d0d7e3;
+  border-radius: 2px;
 }
 
 .slot-row {
@@ -1075,6 +1163,19 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding-right: 4px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.availability-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.availability-list::-webkit-scrollbar-thumb {
+  background: #d0d7e3;
+  border-radius: 2px;
 }
 
 .availability-row {

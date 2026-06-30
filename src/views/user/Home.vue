@@ -144,6 +144,15 @@ async function loadAvailability() {
 
 function handleGoToBooking() {
   if (selectedCategory.value) {
+    try {
+      localStorage.setItem('booking_selected_state', JSON.stringify({
+        categoryId: selectedCategory.value.id,
+        categoryName: selectedCategory.value.category_name,
+        categoryIcon: selectedCategory.value.category_icon
+      }))
+    } catch (e) {
+      console.warn('保存预约状态失败', e)
+    }
     router.push('/home/booking')
   }
 }
