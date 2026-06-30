@@ -67,7 +67,8 @@ async function handleLogin() {
     })
 
     if (error) {
-      throw new Error('工号或密码错误')
+      console.error('Supabase 登录错误:', error)
+      throw new Error('登录失败: ' + (error.message || '未知错误') + ' (code: ' + (error.status || 'unknown') + ')')
     }
 
     const { data: profile, error: profileError } = await supabase
