@@ -112,5 +112,26 @@ export const UserAPI = {
       })
     if (error) throw error
     return data
+  },
+
+  updateUser: async (userId, updates) => {
+    const { data, error } = await supabase
+      .from('users')
+      .update(updates)
+      .eq('id', userId)
+      .select()
+      .single()
+    if (error) throw error
+    return data
+  },
+
+  batchUpdateRole: async (userIds, roleId) => {
+    const { data, error } = await supabase
+      .from('users')
+      .update({ role_id: roleId || null })
+      .in('id', userIds)
+      .select()
+    if (error) throw error
+    return data
   }
 }

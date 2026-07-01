@@ -12,6 +12,8 @@ const roles = ref([])
 const selectedUserIds = ref([])
 const showAddModal = ref(false)
 const showBatchModal = ref(false)
+const showEditModal = ref(false)
+const showBatchRoleModal = ref(false)
 
 const newUser = ref({
   employee_no: '',
@@ -19,7 +21,59 @@ const newUser = ref({
   role_id: ''
 })
 
+const editUser = ref({
+  id: '',
+  employee_no: '',
+  username: '',
+  role_id: ''
+})
+
 const batchText = ref('')
+const batchRoleId = ref('')
+
+// 排序状态
+const sortKey = ref('created_at')
+const sortOrder = ref('desc')
+
+// 排序后的用户列表
+const sortedUsers = computed(() => {
+  const list = [...users.value]
+  const key = sortKey.value
+  const order = sortOrder.value === 'asc' ? 1 : -1
+
+  return list.sort((a, b) => {
+    let valA = ''
+    let valB = ''
+
+    if (key === 'role') {
+      valA = getRoleName(a.role_id)
+      valB = getRoleName(b.role_id)
+    } else if (key === 'created_at') {
+      valA = a[key] || ''
+      valB = b[key] || ''
+      return order * (valA < valB ? -1 : valA > valB ? 1 : 0)
+    } else {
+      valA = (a[key] || '').toString().toLowerCase()
+      valB = (b[key] || '').toString().toLowerCase()
+    }
+
+    return order * (valA < valB ? -1 : valA > valB ? 1 : 0)
+  })
+})
+
+function toggleSort(key) {
+  if (sortKey.value === key) {
+    sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'
+  } else {
+    sortKey.value = key
+    sortOrder.value = 'asc'
+  }
+}
+
+function getSortIcon(key) {
+  if (sortKey.value !== key) return '⇅'
+  return sortOrder.value === 'asc' ? '↑' : '↓'
+}
 
 const allSelected = computed(() => {
   const normalUsers = users.value.filter(u => u.role !== 'admin')
@@ -51,14 +105,6 @@ function getRoleBadgeClass(roleId) {
   const role = roles.value.find(r => r.id === roleId)
   if (!role) return 'badge-user'
   return role.can_booking_all ? 'badge-user' : 'badge-custom'
-}
-
-function getUserRoleType(user) {
-  // 如果有role_id，说明是自定义角色
-  if (user.role_id) return 'custom'
-  // 如果是admin角色
-  if (user.role === 'admin') return 'admin'
-  return 'user'
 }
 
 function formatDate(dateStr) {
@@ -123,6 +169,7 @@ async function handleAddUser() {
 
 function openBatchModal() {
   batchText.value = ''
+  batchRoleId.value = ''
   errorMessage.value = ''
   successMessage.value = ''
   showBatchModal.value = true
@@ -157,6 +204,22 @@ async function handleBatchCreate() {
   errorMessage.value = ''
   try {
     const result = await UserAPI.batchCreateUsers(userList)
+
+    // 如果选择了角色，批量更新所有新创建用户的角色
+    if (batchRoleId.value && result) {
+      try {
+        const newUsers = await UserAPI.listUsers()
+        const newUserIds = newUsers
+          .filter(u => userList.some(su => su.employee_no === u.employee_no))
+          .map(u => u.id)
+        if (newUserIds.length > 0) {
+          await UserAPI.batchUpdateRole(newUserIds, batchRoleId.value)
+        }
+      } catch (e) {
+        // 角色更新失败不影响用户创建结果
+      }
+    }
+
     if (result && result.failed > 0) {
       errorMessage.value = `成功 ${result.success} 个，失败 ${result.failed} 个\n${(result.errors || []).join('\n')}`
     } else {
@@ -166,6 +229,73 @@ async function handleBatchCreate() {
     loadUsers()
   } catch (e) {
     errorMessage.value = e.message || '批量创建失败'
+  } finally {
+    submitting.value = false
+  }
+}
+
+function openEditModal(user) {
+  editUser.value = {
+    id: user.id,
+    employee_no: user.employee_no || '',
+    username: user.username || '',
+    role_id: user.role_id || ''
+  }
+  errorMessage.value = ''
+  successMessage.value = ''
+  showEditModal.value = true
+}
+
+async function handleEditUser() {
+  if (!editUser.value.employee_no.trim()) {
+    errorMessage.value = '请输入工号'
+    return
+  }
+  if (!editUser.value.username.trim()) {
+    errorMessage.value = '请输入姓名'
+    return
+  }
+
+  submitting.value = true
+  errorMessage.value = ''
+  try {
+    await UserAPI.updateUser(editUser.value.id, {
+      employee_no: editUser.value.employee_no.trim(),
+      username: editUser.value.username.trim(),
+      role_id: editUser.value.role_id || null
+    })
+    successMessage.value = '编辑成功'
+    showEditModal.value = false
+    loadUsers()
+  } catch (e) {
+    errorMessage.value = e.message || '编辑失败'
+  } finally {
+    submitting.value = false
+  }
+}
+
+function openBatchRoleModal() {
+  batchRoleId.value = ''
+  errorMessage.value = ''
+  successMessage.value = ''
+  showBatchRoleModal.value = true
+}
+
+async function handleBatchUpdateRole() {
+  if (!batchRoleId.value) {
+    errorMessage.value = '请选择角色'
+    return
+  }
+
+  submitting.value = true
+  errorMessage.value = ''
+  try {
+    await UserAPI.batchUpdateRole(selectedUserIds.value, batchRoleId.value)
+    successMessage.value = `已更新 ${selectedUserIds.value.length} 个用户的角色`
+    showBatchRoleModal.value = false
+    loadUsers()
+  } catch (e) {
+    errorMessage.value = e.message || '批量修改角色失败'
   } finally {
     submitting.value = false
   }
@@ -223,7 +353,10 @@ onMounted(() => {
 
       <div v-if="selectedCount > 0" class="batch-bar">
         <span>已选择 {{ selectedCount }} 个用户</span>
-        <button class="danger-btn" type="button" @click="handleBatchDelete">批量删除</button>
+        <div class="batch-actions">
+          <button class="secondary-btn" type="button" @click="openBatchRoleModal">批量修改角色</button>
+          <button class="danger-btn" type="button" @click="handleBatchDelete">批量删除</button>
+        </div>
       </div>
 
       <div v-if="loading" class="loading-text">加载中...</div>
@@ -233,15 +366,23 @@ onMounted(() => {
           <div class="col-check">
             <input type="checkbox" :checked="allSelected" @change="toggleSelectAll" />
           </div>
-          <div class="col-no">工号</div>
-          <div class="col-name">姓名</div>
-          <div class="col-role">角色</div>
-          <div class="col-date">创建时间</div>
+          <div class="col-no sortable" @click="toggleSort('employee_no')">
+            工号 <span class="sort-icon">{{ getSortIcon('employee_no') }}</span>
+          </div>
+          <div class="col-name sortable" @click="toggleSort('username')">
+            姓名 <span class="sort-icon">{{ getSortIcon('username') }}</span>
+          </div>
+          <div class="col-role sortable" @click="toggleSort('role')">
+            角色 <span class="sort-icon">{{ getSortIcon('role') }}</span>
+          </div>
+          <div class="col-date sortable" @click="toggleSort('created_at')">
+            创建时间 <span class="sort-icon">{{ getSortIcon('created_at') }}</span>
+          </div>
           <div class="col-action">操作</div>
         </div>
         <div class="table-body">
           <div
-            v-for="user in users"
+            v-for="user in sortedUsers"
             :key="user.id"
             class="table-row"
             :class="{ 'row-disabled': user.role === 'admin' }"
@@ -265,6 +406,13 @@ onMounted(() => {
             <div class="col-date">{{ formatDate(user.created_at) }}</div>
             <div class="col-action">
               <button
+                class="link-btn"
+                type="button"
+                @click="openEditModal(user)"
+              >
+                编辑
+              </button>
+              <button
                 v-if="user.role !== 'admin'"
                 class="link-btn danger"
                 type="button"
@@ -272,7 +420,6 @@ onMounted(() => {
               >
                 删除
               </button>
-              <span v-else class="muted">-</span>
             </div>
           </div>
         </div>
@@ -286,9 +433,11 @@ onMounted(() => {
         <li>批量新增格式：每行一个用户，<strong>工号,姓名</strong>（逗号或空格分隔）</li>
         <li>管理员账号无法删除，保护最高权限</li>
         <li>用户登录需要输入 <strong>姓名、工号、密码</strong> 三项</li>
+        <li>点击表头标题可按对应列排序，再次点击切换升降序</li>
       </ul>
     </div>
 
+    <!-- 新增用户弹窗 -->
     <div v-if="showAddModal" class="modal-mask" @click.self="showAddModal = false">
       <div class="modal-box">
         <h3>新增用户</h3>
@@ -320,6 +469,7 @@ onMounted(() => {
       </div>
     </div>
 
+    <!-- 批量新增弹窗 -->
     <div v-if="showBatchModal" class="modal-mask" @click.self="showBatchModal = false">
       <div class="modal-box wide">
         <h3>批量新增用户</h3>
@@ -332,14 +482,78 @@ onMounted(() => {
             rows="10"
           ></textarea>
         </div>
+        <div class="form-group">
+          <label>统一设置角色</label>
+          <select v-model="batchRoleId">
+            <option value="">普通用户（可预约全部）</option>
+            <option v-for="role in roles" :key="role.id" :value="role.id">
+              {{ role.role_name }}{{ role.can_booking_all ? '（可预约全部）' : '（部分类别）' }}
+            </option>
+          </select>
+        </div>
         <div class="form-tip">
-          默认密码：123456，角色均为普通用户<br/>
+          默认密码：123456<br/>
           支持逗号、空格、Tab 分隔
         </div>
         <div class="modal-actions">
           <button class="secondary-btn" type="button" @click="showBatchModal = false">取消</button>
           <button class="primary-btn" type="button" :disabled="submitting" @click="handleBatchCreate">
             {{ submitting ? '创建中...' : '确认批量创建' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 编辑用户弹窗 -->
+    <div v-if="showEditModal" class="modal-mask" @click.self="showEditModal = false">
+      <div class="modal-box">
+        <h3>编辑用户</h3>
+        <p v-if="errorMessage" class="notice error">{{ errorMessage }}</p>
+        <div class="form-group">
+          <label>工号</label>
+          <input v-model="editUser.employee_no" placeholder="请输入工号" type="text" />
+        </div>
+        <div class="form-group">
+          <label>姓名</label>
+          <input v-model="editUser.username" placeholder="请输入姓名" type="text" />
+        </div>
+        <div class="form-group">
+          <label>角色</label>
+          <select v-model="editUser.role_id">
+            <option value="">普通用户（可预约全部）</option>
+            <option v-for="role in roles" :key="role.id" :value="role.id">
+              {{ role.role_name }}{{ role.can_booking_all ? '（可预约全部）' : '（部分类别）' }}
+            </option>
+          </select>
+        </div>
+        <div class="modal-actions">
+          <button class="secondary-btn" type="button" @click="showEditModal = false">取消</button>
+          <button class="primary-btn" type="button" :disabled="submitting" @click="handleEditUser">
+            {{ submitting ? '保存中...' : '确认保存' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 批量修改角色弹窗 -->
+    <div v-if="showBatchRoleModal" class="modal-mask" @click.self="showBatchRoleModal = false">
+      <div class="modal-box">
+        <h3>批量修改角色</h3>
+        <p class="batch-info">将为选中的 {{ selectedCount }} 个用户统一设置角色</p>
+        <p v-if="errorMessage" class="notice error">{{ errorMessage }}</p>
+        <div class="form-group">
+          <label>选择角色</label>
+          <select v-model="batchRoleId">
+            <option value="">普通用户（可预约全部）</option>
+            <option v-for="role in roles" :key="role.id" :value="role.id">
+              {{ role.role_name }}{{ role.can_booking_all ? '（可预约全部）' : '（部分类别）' }}
+            </option>
+          </select>
+        </div>
+        <div class="modal-actions">
+          <button class="secondary-btn" type="button" @click="showBatchRoleModal = false">取消</button>
+          <button class="primary-btn" type="button" :disabled="submitting" @click="handleBatchUpdateRole">
+            {{ submitting ? '修改中...' : '确认修改' }}
           </button>
         </div>
       </div>
@@ -444,6 +658,11 @@ onMounted(() => {
   font-weight: 500;
 }
 
+.batch-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
 .user-table {
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
@@ -483,6 +702,24 @@ onMounted(() => {
   opacity: 0.7;
 }
 
+.sortable {
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.2s;
+}
+
+.sortable:hover {
+  color: var(--primary);
+}
+
+.sort-icon {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
 .col-check {
   width: 40px;
   flex-shrink: 0;
@@ -519,8 +756,10 @@ onMounted(() => {
 }
 
 .col-action {
-  width: 80px;
+  width: 100px;
   flex-shrink: 0;
+  display: flex;
+  gap: var(--space-2);
 }
 
 .badge {
@@ -649,6 +888,12 @@ onMounted(() => {
   font-size: 18px;
   font-weight: 600;
   color: var(--text-primary);
+}
+
+.batch-info {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-4);
 }
 
 .form-group {
