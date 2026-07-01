@@ -24,6 +24,11 @@ const isRefreshing = ref(false)
 const newItemId = ref(null)
 const deletingId = ref(null)
 
+// 拖拽排序状态
+const draggingId = ref(null)
+const dragOverId = ref(null)
+const savingSort = ref(false)
+
 const filtered_instruments = computed(() => {
   if (!selected_category_id.value) return instruments.value
   return instruments.value.filter(i => i.category_id === selected_category_id.value)
@@ -182,6 +187,68 @@ onMounted(async () => {
   await loadCategories()
   await loadInstruments()
 })
+
+// 拖拽排序
+function handleDragStart(event, item) {
+  draggingId.value = item.id
+  event.dataTransfer.effectAllowed = 'move'
+  event.target.classList.add('dragging')
+}
+
+function handleDragEnd(event) {
+  event.target.classList.remove('dragging')
+  draggingId.value = null
+  dragOverId.value = null
+}
+
+function handleDragOver(event, item) {
+  event.preventDefault()
+  event.dataTransfer.dropEffect = 'move'
+  if (item.id !== draggingId.value) {
+    dragOverId.value = item.id
+  }
+}
+
+function handleDragLeave() {
+  dragOverId.value = null
+}
+
+async function handleDrop(event, targetItem) {
+  event.preventDefault()
+  const draggedId = draggingId.value
+  if (!draggedId || draggedId === targetItem.id) {
+    draggingId.value = null
+    dragOverId.value = null
+    return
+  }
+
+  const list = filtered_instruments.value
+  const draggedIndex = list.findIndex(i => i.id === draggedId)
+  const targetIndex = list.findIndex(i => i.id === targetItem.id)
+
+  if (draggedIndex === -1 || targetIndex === -1) return
+
+  // 交换位置
+  const draggedItem = list[draggedIndex]
+  list.splice(draggedIndex, 1)
+  list.splice(targetIndex, 0, draggedItem)
+
+  draggingId.value = null
+  dragOverId.value = null
+
+  // 保存排序
+  savingSort.value = true
+  try {
+    await InstrumentAPI.updateSortOrder(list)
+    success_message.value = '排序已保存'
+    setTimeout(() => { success_message.value = '' }, 1500)
+  } catch (e) {
+    error_message.value = '排序保存失败：' + (e.message || '')
+    await loadInstruments()
+  } finally {
+    savingSort.value = false
+  }
+}
 </script>
 
 <template>
@@ -233,6 +300,7 @@ onMounted(async () => {
       <div class="list-header">
         <h3>仪器列表（{{ filtered_instruments.length }} 台）</h3>
         <div class="filter-select">
+          <span v-if="savingSort" class="sort-saving">保存排序中...</span>
           <select v-model="selected_category_id">
             <option value="">全部类别</option>
             <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.category_name }}</option>
@@ -251,9 +319,18 @@ onMounted(async () => {
           :class="{
             'list-refresh-item': isRefreshing,
             'blinds-enter': newItemId === item.id,
-            'wipe-out': deletingId === item.id
+            'wipe-out': deletingId === item.id,
+            'dragging': draggingId === item.id,
+            'drag-over': dragOverId === item.id
           }"
+          draggable="true"
+          @dragstart="handleDragStart($event, item)"
+          @dragend="handleDragEnd($event)"
+          @dragover="handleDragOver($event, item)"
+          @dragleave="handleDragLeave"
+          @drop="handleDrop($event, item)"
         >
+          <div class="drag-handle" title="拖拽排序">⋮⋮</div>
           <div class="instrument-info">
             <div class="instrument-name">{{ item.instrument_name }}</div>
             <div class="instrument-category">{{ getCategoryName(item.category_id) }}</div>
@@ -414,6 +491,40 @@ onMounted(async () => {
   padding: var(--space-3);
   background: var(--bg);
   border-radius: var(--radius-md);
+  cursor: grab;
+  transition: all 0.2s ease;
+  border: 2px solid transparent;
+}
+
+.instrument-item:hover {
+  background: var(--hover);
+}
+
+.instrument-item.dragging {
+  opacity: 0.5;
+  cursor: grabbing;
+}
+
+.instrument-item.drag-over {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.drag-handle {
+  cursor: grab;
+  color: var(--text-muted);
+  font-size: 14px;
+  padding: 0 4px;
+  user-select: none;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.sort-saving {
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
 .instrument-info {

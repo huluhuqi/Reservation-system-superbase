@@ -2,7 +2,7 @@ import { supabase } from '@/lib/supabase'
 
 export const InstrumentAPI = {
   list: async (categoryId) => {
-    let query = supabase.from('instrument').select('*')
+    let query = supabase.from('instrument').select('*').order('sort_order', { ascending: true })
     if (categoryId) query = query.eq('category_id', categoryId)
     const { data, error } = await query
     if (error) throw error
@@ -18,7 +18,8 @@ export const InstrumentAPI = {
       category_id: payload.category_id,
       description: payload.description,
       status: payload.status || 'active',
-      location: payload.location
+      location: payload.location,
+      sort_order: payload.sort_order || 0
     }
     const { data, error } = await supabase
       .from('instrument')
@@ -37,6 +38,7 @@ export const InstrumentAPI = {
     if (payload.description !== undefined) updateData.description = payload.description
     if (payload.status !== undefined) updateData.status = payload.status
     if (payload.location !== undefined) updateData.location = payload.location
+    if (payload.sort_order !== undefined) updateData.sort_order = payload.sort_order
 
     const { data, error } = await supabase
       .from('instrument')
@@ -50,6 +52,17 @@ export const InstrumentAPI = {
 
   remove: async (id) => {
     const { error } = await supabase.from('instrument').delete().eq('id', id)
+    if (error) throw error
+  },
+
+  updateSortOrder: async (items) => {
+    const updates = items.map((item, index) => ({
+      id: item.id,
+      sort_order: index
+    }))
+    const { error } = await supabase
+      .from('instrument')
+      .upsert(updates, { onConflict: 'id' })
     if (error) throw error
   }
 }

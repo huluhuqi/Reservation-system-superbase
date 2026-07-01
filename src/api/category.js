@@ -52,6 +52,17 @@ export const CategoryAPI = {
     if (error) throw error
   },
 
+  updateSortOrder: async (items) => {
+    const updates = items.map((item, index) => ({
+      id: item.id,
+      sort_order: index
+    }))
+    const { error } = await supabase
+      .from('category')
+      .upsert(updates, { onConflict: 'id' })
+    if (error) throw error
+  },
+
   getSettings: async (id) => {
     const { data, error } = await supabase
       .from('category')

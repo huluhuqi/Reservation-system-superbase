@@ -21,6 +21,11 @@ const form = ref({
 const editMode = ref(false)
 const editingId = ref(null)
 
+// 拖拽排序状态
+const draggingId = ref(null)
+const dragOverId = ref(null)
+const savingSort = ref(false)
+
 async function loadCategories() {
   loading.value = true
   refreshAnimation.value = true
@@ -201,6 +206,67 @@ async function deleteCategory(item) {
 onMounted(() => {
   loadCategories()
 })
+
+// 拖拽排序
+function handleDragStart(event, item) {
+  draggingId.value = item.id
+  event.dataTransfer.effectAllowed = 'move'
+  event.target.classList.add('dragging')
+}
+
+function handleDragEnd(event) {
+  event.target.classList.remove('dragging')
+  draggingId.value = null
+  dragOverId.value = null
+}
+
+function handleDragOver(event, item) {
+  event.preventDefault()
+  event.dataTransfer.dropEffect = 'move'
+  if (item.id !== draggingId.value) {
+    dragOverId.value = item.id
+  }
+}
+
+function handleDragLeave() {
+  dragOverId.value = null
+}
+
+async function handleDrop(event, targetItem) {
+  event.preventDefault()
+  const draggedId = draggingId.value
+  if (!draggedId || draggedId === targetItem.id) {
+    draggingId.value = null
+    dragOverId.value = null
+    return
+  }
+
+  const draggedIndex = categories.value.findIndex(c => c.id === draggedId)
+  const targetIndex = categories.value.findIndex(c => c.id === targetItem.id)
+
+  if (draggedIndex === -1 || targetIndex === -1) return
+
+  // 交换位置
+  const draggedItem = categories.value[draggedIndex]
+  categories.value.splice(draggedIndex, 1)
+  categories.value.splice(targetIndex, 0, draggedItem)
+
+  draggingId.value = null
+  dragOverId.value = null
+
+  // 保存排序
+  savingSort.value = true
+  try {
+    await CategoryAPI.updateSortOrder(categories.value)
+    successMessage.value = '排序已保存'
+    setTimeout(() => { successMessage.value = '' }, 1500)
+  } catch (e) {
+    errorMessage.value = '排序保存失败：' + (e.message || '')
+    await loadCategories()
+  } finally {
+    savingSort.value = false
+  }
+}
 </script>
 
 <template>
@@ -279,22 +345,34 @@ onMounted(() => {
     <div class="list-card">
       <div class="list-header">
         <h3>类别列表（{{ categories.length }} 个）</h3>
-        <button class="secondary-btn btn-animate" type="button" @click="loadCategories">刷新</button>
+        <div class="header-actions">
+          <span v-if="savingSort" class="sort-saving">保存排序中...</span>
+          <button class="secondary-btn btn-animate" type="button" @click="loadCategories">刷新</button>
+        </div>
       </div>
 
       <div v-if="loading" class="loading-text">加载中...</div>
       <div v-else-if="categories.length === 0" class="empty-text">暂无类别</div>
       <div v-else class="category-list">
-            <div 
-              v-for="item in categories" 
-              :key="item.id" 
+            <div
+              v-for="item in categories"
+              :key="item.id"
               class="category-item"
               :class="{
                 'list-refresh-item': refreshAnimation,
                 'blinds-enter': newItemId === item.id,
-                'wipe-out': deletingId === item.id
+                'wipe-out': deletingId === item.id,
+                'dragging': draggingId === item.id,
+                'drag-over': dragOverId === item.id
               }"
+              draggable="true"
+              @dragstart="handleDragStart($event, item)"
+              @dragend="handleDragEnd($event)"
+              @dragover="handleDragOver($event, item)"
+              @dragleave="handleDragLeave"
+              @drop="handleDrop($event, item)"
             >
+              <div class="drag-handle" title="拖拽排序">⋮⋮</div>
               <div class="category-info">
                 <span v-if="isImageUrl(item.category_icon)" class="category-icon-img">
                   <img :src="item.category_icon" :alt="item.category_name" />
@@ -493,6 +571,46 @@ onMounted(() => {
   padding: var(--space-3);
   background: var(--bg);
   border-radius: var(--radius-md);
+  cursor: grab;
+  transition: all 0.2s ease;
+  border: 2px solid transparent;
+}
+
+.category-item:hover {
+  background: var(--hover);
+}
+
+.category-item.dragging {
+  opacity: 0.5;
+  cursor: grabbing;
+}
+
+.category-item.drag-over {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.drag-handle {
+  cursor: grab;
+  color: var(--text-muted);
+  font-size: 14px;
+  padding: 0 4px;
+  user-select: none;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.sort-saving {
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
 .category-info {
