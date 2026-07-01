@@ -1,11 +1,13 @@
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { UserAPI, RoleAPI } from '@/api'
 
 const loading = ref(false)
 const submitting = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
+const isRefresh = ref(false)
+const deletingIds = ref([])
 
 const users = ref([])
 const roles = ref([])
@@ -85,12 +87,25 @@ const selectedCount = computed(() => selectedUserIds.value.length)
 async function loadUsers() {
   loading.value = true
   errorMessage.value = ''
+  isRefresh.value = true
   try {
     users.value = await UserAPI.listUsers()
     roles.value = await RoleAPI.getAll()
     selectedUserIds.value = []
+    // 加载完成后添加百叶窗动画
+    await nextTick()
+    setTimeout(() => {
+      const rows = document.querySelectorAll('.table-row')
+      rows.forEach((row, index) => {
+        setTimeout(() => {
+          row.classList.add('list-refresh-item')
+        }, index * 50)
+      })
+      isRefresh.value = false
+    }, 100)
   } catch (e) {
     errorMessage.value = e.message || '加载用户失败'
+    isRefresh.value = false
   } finally {
     loading.value = false
   }
@@ -159,7 +174,15 @@ async function handleAddUser() {
     )
     successMessage.value = '创建成功，默认密码：123456'
     showAddModal.value = false
-    loadUsers()
+    await loadUsers()
+    // 新增成功后给新项添加动画
+    await nextTick()
+    setTimeout(() => {
+      const rows = document.querySelectorAll('.table-row')
+      if (rows.length > 0) {
+        rows[0].classList.add('blinds-enter')
+      }
+    }, 100)
   } catch (e) {
     errorMessage.value = e.message || '创建失败'
   } finally {
@@ -303,13 +326,26 @@ async function handleBatchUpdateRole() {
 
 async function handleDeleteUser(userId) {
   if (!confirm('确定要删除该用户吗？')) return
-  try {
-    await UserAPI.deleteUser(userId)
-    successMessage.value = '删除成功'
-    loadUsers()
-  } catch (e) {
-    errorMessage.value = e.message || '删除失败'
+
+  // 先添加删除动画
+  deletingIds.value.push(userId)
+  const row = document.querySelector(`.table-row[data-user-id="${userId}"]`)
+  if (row) {
+    row.classList.add('wipe-out')
   }
+
+  // 等待动画完成后再删除
+  setTimeout(async () => {
+    try {
+      await UserAPI.deleteUser(userId)
+      successMessage.value = '删除成功'
+      deletingIds.value = deletingIds.value.filter(id => id !== userId)
+      loadUsers()
+    } catch (e) {
+      errorMessage.value = e.message || '删除失败'
+      deletingIds.value = deletingIds.value.filter(id => id !== userId)
+    }
+  }, 350)
 }
 
 async function handleBatchDelete() {
@@ -318,17 +354,29 @@ async function handleBatchDelete() {
     return
   }
   if (!confirm(`确定要删除选中的 ${selectedUserIds.value.length} 个用户吗？`)) return
-  try {
-    const result = await UserAPI.batchDeleteUsers(selectedUserIds.value)
-    if (result && result.failed > 0) {
-      errorMessage.value = `成功删除 ${result.success} 个，失败 ${result.failed} 个`
-    } else {
-      successMessage.value = `成功删除 ${result?.success || selectedUserIds.value.length} 个用户`
+
+  // 先给所有要删除的项添加动画
+  selectedUserIds.value.forEach(id => {
+    const row = document.querySelector(`.table-row[data-user-id="${id}"]`)
+    if (row) {
+      row.classList.add('wipe-out')
     }
-    loadUsers()
-  } catch (e) {
-    errorMessage.value = e.message || '批量删除失败'
-  }
+  })
+
+  // 等待动画完成后再删除
+  setTimeout(async () => {
+    try {
+      const result = await UserAPI.batchDeleteUsers(selectedUserIds.value)
+      if (result && result.failed > 0) {
+        errorMessage.value = `成功删除 ${result.success} 个，失败 ${result.failed} 个`
+      } else {
+        successMessage.value = `成功删除 ${result?.success || selectedUserIds.value.length} 个用户`
+      }
+      loadUsers()
+    } catch (e) {
+      errorMessage.value = e.message || '批量删除失败'
+    }
+  }, 350)
 }
 
 onMounted(() => {
@@ -342,9 +390,9 @@ onMounted(() => {
       <div class="list-header">
         <h3>用户管理（{{ users.length }} 人）</h3>
         <div class="header-actions">
-          <button class="secondary-btn" type="button" @click="loadUsers">刷新</button>
-          <button class="primary-btn" type="button" @click="openAddModal">新增用户</button>
-          <button class="secondary-btn" type="button" @click="openBatchModal">批量新增</button>
+          <button class="secondary-btn btn-animate" type="button" @click="loadUsers">刷新</button>
+          <button class="primary-btn btn-animate" type="button" @click="openAddModal">新增用户</button>
+          <button class="secondary-btn btn-animate" type="button" @click="openBatchModal">批量新增</button>
         </div>
       </div>
 
@@ -354,8 +402,8 @@ onMounted(() => {
       <div v-if="selectedCount > 0" class="batch-bar">
         <span>已选择 {{ selectedCount }} 个用户</span>
         <div class="batch-actions">
-          <button class="secondary-btn" type="button" @click="openBatchRoleModal">批量修改角色</button>
-          <button class="danger-btn" type="button" @click="handleBatchDelete">批量删除</button>
+          <button class="secondary-btn btn-animate" type="button" @click="openBatchRoleModal">批量修改角色</button>
+          <button class="danger-btn btn-animate" type="button" @click="handleBatchDelete">批量删除</button>
         </div>
       </div>
 
@@ -384,6 +432,7 @@ onMounted(() => {
           <div
             v-for="user in sortedUsers"
             :key="user.id"
+            :data-user-id="user.id"
             class="table-row"
             :class="{ 'row-disabled': user.role === 'admin' }"
           >
@@ -406,7 +455,7 @@ onMounted(() => {
             <div class="col-date">{{ formatDate(user.created_at) }}</div>
             <div class="col-action">
               <button
-                class="link-btn"
+                class="link-btn btn-animate"
                 type="button"
                 @click="openEditModal(user)"
               >
@@ -414,7 +463,7 @@ onMounted(() => {
               </button>
               <button
                 v-if="user.role !== 'admin'"
-                class="link-btn danger"
+                class="link-btn danger btn-animate"
                 type="button"
                 @click="handleDeleteUser(user.id)"
               >
@@ -439,7 +488,7 @@ onMounted(() => {
 
     <!-- 新增用户弹窗 -->
     <div v-if="showAddModal" class="modal-mask" @click.self="showAddModal = false">
-      <div class="modal-box">
+      <div class="modal-box modal-animate">
         <h3>新增用户</h3>
         <p v-if="errorMessage" class="notice error">{{ errorMessage }}</p>
         <div class="form-group">
@@ -461,8 +510,8 @@ onMounted(() => {
         </div>
         <div class="form-tip">默认密码：123456</div>
         <div class="modal-actions">
-          <button class="secondary-btn" type="button" @click="showAddModal = false">取消</button>
-          <button class="primary-btn" type="button" :disabled="submitting" @click="handleAddUser">
+          <button class="secondary-btn btn-animate" type="button" @click="showAddModal = false">取消</button>
+          <button class="primary-btn btn-animate" type="button" :disabled="submitting" @click="handleAddUser">
             {{ submitting ? '创建中...' : '确认创建' }}
           </button>
         </div>
@@ -471,7 +520,7 @@ onMounted(() => {
 
     <!-- 批量新增弹窗 -->
     <div v-if="showBatchModal" class="modal-mask" @click.self="showBatchModal = false">
-      <div class="modal-box wide">
+      <div class="modal-box wide modal-animate">
         <h3>批量新增用户</h3>
         <p v-if="errorMessage" class="notice error">{{ errorMessage }}</p>
         <div class="form-group">
@@ -496,8 +545,8 @@ onMounted(() => {
           支持逗号、空格、Tab 分隔
         </div>
         <div class="modal-actions">
-          <button class="secondary-btn" type="button" @click="showBatchModal = false">取消</button>
-          <button class="primary-btn" type="button" :disabled="submitting" @click="handleBatchCreate">
+          <button class="secondary-btn btn-animate" type="button" @click="showBatchModal = false">取消</button>
+          <button class="primary-btn btn-animate" type="button" :disabled="submitting" @click="handleBatchCreate">
             {{ submitting ? '创建中...' : '确认批量创建' }}
           </button>
         </div>
@@ -506,7 +555,7 @@ onMounted(() => {
 
     <!-- 编辑用户弹窗 -->
     <div v-if="showEditModal" class="modal-mask" @click.self="showEditModal = false">
-      <div class="modal-box">
+      <div class="modal-box modal-animate">
         <h3>编辑用户</h3>
         <p v-if="errorMessage" class="notice error">{{ errorMessage }}</p>
         <div class="form-group">
@@ -527,8 +576,8 @@ onMounted(() => {
           </select>
         </div>
         <div class="modal-actions">
-          <button class="secondary-btn" type="button" @click="showEditModal = false">取消</button>
-          <button class="primary-btn" type="button" :disabled="submitting" @click="handleEditUser">
+          <button class="secondary-btn btn-animate" type="button" @click="showEditModal = false">取消</button>
+          <button class="primary-btn btn-animate" type="button" :disabled="submitting" @click="handleEditUser">
             {{ submitting ? '保存中...' : '确认保存' }}
           </button>
         </div>
@@ -537,7 +586,7 @@ onMounted(() => {
 
     <!-- 批量修改角色弹窗 -->
     <div v-if="showBatchRoleModal" class="modal-mask" @click.self="showBatchRoleModal = false">
-      <div class="modal-box">
+      <div class="modal-box modal-animate">
         <h3>批量修改角色</h3>
         <p class="batch-info">将为选中的 {{ selectedCount }} 个用户统一设置角色</p>
         <p v-if="errorMessage" class="notice error">{{ errorMessage }}</p>
@@ -551,8 +600,8 @@ onMounted(() => {
           </select>
         </div>
         <div class="modal-actions">
-          <button class="secondary-btn" type="button" @click="showBatchRoleModal = false">取消</button>
-          <button class="primary-btn" type="button" :disabled="submitting" @click="handleBatchUpdateRole">
+          <button class="secondary-btn btn-animate" type="button" @click="showBatchRoleModal = false">取消</button>
+          <button class="primary-btn btn-animate" type="button" :disabled="submitting" @click="handleBatchUpdateRole">
             {{ submitting ? '修改中...' : '确认修改' }}
           </button>
         </div>
@@ -940,5 +989,89 @@ onMounted(() => {
   gap: var(--space-2);
   justify-content: flex-end;
   margin-top: var(--space-5);
+}
+
+/* 按钮点击跳动动画 */
+.btn-animate {
+  transition: transform 0.15s ease;
+}
+
+.btn-animate:active {
+  transform: scale(0.95);
+}
+
+/* 列表刷新百叶窗动画 */
+.list-refresh-item {
+  animation: blindsRefresh 0.4s ease forwards;
+}
+
+@keyframes blindsRefresh {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 新增项入场动画 */
+.blinds-enter {
+  animation: blindsEnter 0.5s ease forwards;
+}
+
+@keyframes blindsEnter {
+  0% {
+    opacity: 0;
+    transform: translateX(-20px);
+    background: var(--primary-soft);
+  }
+  50% {
+    background: var(--primary-soft);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+    background: transparent;
+  }
+}
+
+/* 删除项出场动画 */
+.wipe-out {
+  animation: wipeOut 0.35s ease forwards;
+  pointer-events: none;
+}
+
+@keyframes wipeOut {
+  0% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(30px);
+    height: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    margin: 0;
+    overflow: hidden;
+  }
+}
+
+/* 模态框动画 */
+.modal-animate {
+  animation: modalSlideIn 0.3s ease forwards;
+}
+
+@keyframes modalSlideIn {
+  0% {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 </style>

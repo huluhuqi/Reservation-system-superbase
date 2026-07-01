@@ -8,6 +8,9 @@ const operating = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
 const uploading = ref(false)
+const refreshAnimation = ref(false)
+const newItemId = ref(null)
+const deletingId = ref(null)
 
 const categories = ref([])
 const form = ref({
@@ -20,12 +23,16 @@ const editingId = ref(null)
 
 async function loadCategories() {
   loading.value = true
+  refreshAnimation.value = true
   try {
     categories.value = await CategoryAPI.list()
   } catch (e) {
     errorMessage.value = e.message || '加载类别失败'
   } finally {
     loading.value = false
+    setTimeout(() => {
+      refreshAnimation.value = false
+    }, 600)
   }
 }
 
@@ -84,7 +91,7 @@ async function addCategory() {
   operating.value = true
   errorMessage.value = ''
   try {
-    await CategoryAPI.create({
+    const newCategory = await CategoryAPI.create({
       category_name,
       category_icon: form.value.category_icon.trim()
     })
@@ -93,6 +100,10 @@ async function addCategory() {
     form.value.icon_type = 'emoji'
     successMessage.value = '新增类别成功'
     await loadCategories()
+    if (newCategory && newCategory.id) {
+      newItemId.value = newCategory.id
+      setTimeout(() => { newItemId.value = null }, 600)
+    }
     setTimeout(() => { successMessage.value = '' }, 2000)
   } catch (e) {
     errorMessage.value = e.message || '新增失败'
@@ -152,34 +163,39 @@ async function deleteCategory(item) {
   )
   if (!confirmed) return
 
-  operating.value = true
-  errorMessage.value = ''
-  try {
-    if (item.category_icon && isImageUrl(item.category_icon)) {
-      try {
-        const urlParts = item.category_icon.split('/category-icons/')
-        if (urlParts.length === 2) {
-          const fileName = decodeURIComponent(urlParts[1].split('?')[0])
-          await supabase.storage
-            .from('category-icons')
-            .remove([fileName])
+  deletingId.value = item.id
+  
+  setTimeout(async () => {
+    operating.value = true
+    errorMessage.value = ''
+    try {
+      if (item.category_icon && isImageUrl(item.category_icon)) {
+        try {
+          const urlParts = item.category_icon.split('/category-icons/')
+          if (urlParts.length === 2) {
+            const fileName = decodeURIComponent(urlParts[1].split('?')[0])
+            await supabase.storage
+              .from('category-icons')
+              .remove([fileName])
+          }
+        } catch (e) {
+          console.warn('删除图片失败，继续删除类别:', e)
         }
-      } catch (e) {
-        console.warn('删除图片失败，继续删除类别:', e)
       }
-    }
 
-    await CategoryAPI.remove(item.id)
-    successMessage.value = '删除类别成功'
-    await loadCategories()
-    setTimeout(() => { successMessage.value = '' }, 2000)
-  } catch (e) {
-    errorMessage.value = e.message || '删除失败'
-  } finally {
-    setTimeout(() => {
-      operating.value = false
-    }, 1200)
-  }
+      await CategoryAPI.remove(item.id)
+      successMessage.value = '删除类别成功'
+      await loadCategories()
+      setTimeout(() => { successMessage.value = '' }, 2000)
+    } catch (e) {
+      errorMessage.value = e.message || '删除失败'
+    } finally {
+      deletingId.value = null
+      setTimeout(() => {
+        operating.value = false
+      }, 1200)
+    }
+  }, 350)
 }
 
 onMounted(() => {
@@ -201,7 +217,7 @@ onMounted(() => {
           <div class="icon-type-tabs">
             <button 
               type="button"
-              class="tab-btn"
+              class="tab-btn btn-animate"
               :class="{ active: form.icon_type === 'emoji' }"
               @click="form.icon_type = 'emoji'"
             >
@@ -209,7 +225,7 @@ onMounted(() => {
             </button>
             <button 
               type="button"
-              class="tab-btn"
+              class="tab-btn btn-animate"
               :class="{ active: form.icon_type === 'image' }"
               @click="form.icon_type = 'image'"
             >
@@ -227,7 +243,7 @@ onMounted(() => {
         <div class="field-block" v-else>
           <label>上传图片</label>
           <div class="upload-area">
-            <label class="upload-btn">
+            <label class="upload-btn btn-animate">
               <input 
                 type="file" 
                 accept="image/*" 
@@ -247,12 +263,12 @@ onMounted(() => {
       </div>
 
       <div class="form-actions" v-if="editMode">
-        <button class="secondary-btn" type="button" @click="cancelEdit">取消</button>
-        <button class="primary-btn" type="button" @click="saveCategory" :disabled="operating || uploading">
+        <button class="secondary-btn btn-animate" type="button" @click="cancelEdit">取消</button>
+        <button class="primary-btn btn-animate" type="button" @click="saveCategory" :disabled="operating || uploading">
           {{ operating ? '处理中...' : '保存修改' }}
         </button>
       </div>
-      <button v-else class="primary-btn" type="button" @click="addCategory" :disabled="operating || uploading">
+      <button v-else class="primary-btn btn-animate" type="button" @click="addCategory" :disabled="operating || uploading">
         {{ operating ? '处理中...' : '新增类别' }}
       </button>
     </div>
@@ -263,13 +279,22 @@ onMounted(() => {
     <div class="list-card">
       <div class="list-header">
         <h3>类别列表（{{ categories.length }} 个）</h3>
-        <button class="secondary-btn" type="button" @click="loadCategories">刷新</button>
+        <button class="secondary-btn btn-animate" type="button" @click="loadCategories">刷新</button>
       </div>
 
       <div v-if="loading" class="loading-text">加载中...</div>
       <div v-else-if="categories.length === 0" class="empty-text">暂无类别</div>
       <div v-else class="category-list">
-            <div v-for="item in categories" :key="item.id" class="category-item">
+            <div 
+              v-for="item in categories" 
+              :key="item.id" 
+              class="category-item"
+              :class="{
+                'list-refresh-item': refreshAnimation,
+                'blinds-enter': newItemId === item.id,
+                'wipe-out': deletingId === item.id
+              }"
+            >
               <div class="category-info">
                 <span v-if="isImageUrl(item.category_icon)" class="category-icon-img">
                   <img :src="item.category_icon" :alt="item.category_name" />
@@ -278,10 +303,10 @@ onMounted(() => {
                 <span class="category-name">{{ item.category_name }}</span>
               </div>
               <div class="category-actions">
-                <button class="text-btn" type="button" @click="editCategory(item)" :disabled="operating">
+                <button class="text-btn btn-animate" type="button" @click="editCategory(item)" :disabled="operating">
                   编辑
                 </button>
-                <button class="text-btn danger" type="button" @click="deleteCategory(item)" :disabled="operating">
+                <button class="text-btn danger btn-animate" type="button" @click="deleteCategory(item)" :disabled="operating">
                   删除
                 </button>
               </div>
@@ -547,4 +572,68 @@ onMounted(() => {
 
 .notice.error { background: var(--danger-soft); color: var(--danger); }
 .notice.success { background: var(--success-soft); color: var(--success); }
+
+/* 按钮点击跳动特效 */
+.btn-animate {
+  transition: transform 0.15s ease;
+}
+
+.btn-animate:active {
+  transform: scale(0.95);
+}
+
+/* 列表刷新百叶窗特效 */
+.list-refresh-item {
+  animation: blindsRefresh 0.6s ease-out;
+}
+
+@keyframes blindsRefresh {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 新增项百叶窗进入特效 */
+.blinds-enter {
+  animation: blindsEnter 0.6s ease-out;
+}
+
+@keyframes blindsEnter {
+  0% {
+    opacity: 0;
+    transform: scaleY(0);
+    transform-origin: top;
+  }
+  50% {
+    opacity: 0.5;
+    transform: scaleY(0.5);
+    transform-origin: top;
+  }
+  100% {
+    opacity: 1;
+    transform: scaleY(1);
+    transform-origin: top;
+  }
+}
+
+/* 删除项擦除特效 */
+.wipe-out {
+  animation: wipeOut 0.35s ease-out forwards;
+}
+
+@keyframes wipeOut {
+  0% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}
 </style>

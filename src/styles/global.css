@@ -192,3 +192,175 @@ a {
 .section {
   margin-bottom: 24px;
 }
+
+/* =======================
+   动画特效系统
+   ======================= */
+
+/* 页面切换平滑过渡 */
+.page-transition-enter-active,
+.page-transition-leave-active {
+  transition: all 0.3s ease;
+}
+
+.page-transition-enter-from {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+.page-transition-leave-to {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+/* 百叶窗特效（新增/刷新） */
+@keyframes blinds-enter {
+  0% {
+    opacity: 0;
+    transform: translateY(-20px) scaleY(0.5);
+    filter: blur(2px);
+  }
+  50% {
+    opacity: 0.5;
+    transform: translateY(-5px) scaleY(0.8);
+    filter: blur(1px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scaleY(1);
+    filter: blur(0);
+  }
+}
+
+.blinds-enter {
+  animation: blinds-enter 0.4s ease-out forwards;
+}
+
+.blinds-enter-delay-1 {
+  animation: blinds-enter 0.4s ease-out 0.05s forwards;
+  opacity: 0;
+}
+
+.blinds-enter-delay-2 {
+  animation: blinds-enter 0.4s ease-out 0.1s forwards;
+  opacity: 0;
+}
+
+.blinds-enter-delay-3 {
+  animation: blinds-enter 0.4s ease-out 0.15s forwards;
+  opacity: 0;
+}
+
+.blinds-enter-delay-4 {
+  animation: blinds-enter 0.4s ease-out 0.2s forwards;
+  opacity: 0;
+}
+
+.blinds-enter-delay-5 {
+  animation: blinds-enter 0.4s ease-out 0.25s forwards;
+  opacity: 0;
+}
+
+/* 擦除特效（删除） */
+@keyframes wipe-out {
+  0% {
+    opacity: 1;
+    transform: scaleX(1);
+    filter: blur(0);
+  }
+  30% {
+    opacity: 0.8;
+    transform: scaleX(0.9);
+    filter: blur(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scaleX(0.3) translateX(50px);
+    filter: blur(3px);
+  }
+}
+
+.wipe-out {
+  animation: wipe-out 0.35s ease-in forwards;
+}
+
+/* 按钮点击跳动特效 */
+@keyframes btn-bounce {
+  0% {
+    transform: scale(1);
+  }
+  25% {
+    transform: scale(0.92);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  75% {
+    transform: scale(0.98);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.btn-bounce {
+  animation: btn-bounce 0.25s ease;
+}
+
+/* 按钮通用点击动效类 */
+.btn-animate {
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.btn-animate:active {
+  transform: scale(0.95);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15) !important;
+}
+
+/* 刷新时列表项动画 */
+@keyframes list-refresh {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.list-refresh-item {
+  animation: list-refresh 0.3s ease-out forwards;
+}
+
+/* 模态框弹出动画 */
+@keyframes modal-enter {
+  0% {
+    opacity: 0;
+    transform: scale(0.9) translateY(-20px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.modal-animate {
+  animation: modal-enter 0.3s ease-out;
+}
+
+/* 模态框关闭动画 */
+@keyframes modal-leave {
+  0% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.9) translateY(20px);
+  }
+}
+
+.modal-animate-leave {
+  animation: modal-leave 0.2s ease-in forwards;
+}

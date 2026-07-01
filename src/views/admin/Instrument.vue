@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, nextTick } from 'vue'
 import { InstrumentAPI, CategoryAPI } from '@/api'
 
 const loading = ref(false)
@@ -19,6 +19,11 @@ const form = ref({
 const editMode = ref(false)
 const editingId = ref(null)
 
+// 动画状态
+const isRefreshing = ref(false)
+const newItemId = ref(null)
+const deletingId = ref(null)
+
 const filtered_instruments = computed(() => {
   if (!selected_category_id.value) return instruments.value
   return instruments.value.filter(i => i.category_id === selected_category_id.value)
@@ -37,12 +42,17 @@ async function loadCategories() {
 
 async function loadInstruments() {
   loading.value = true
+  isRefreshing.value = true
   try {
     instruments.value = await InstrumentAPI.list()
   } catch (e) {
     error_message.value = e.message || '加载仪器失败'
   } finally {
     loading.value = false
+    // 延迟移除刷新动画类
+    setTimeout(() => {
+      isRefreshing.value = false
+    }, 600)
   }
 }
 
@@ -62,13 +72,20 @@ async function addInstrument() {
   operating.value = true
   error_message.value = ''
   try {
-    await InstrumentAPI.create({
+    const newInstrument = await InstrumentAPI.create({
       instrument_name,
       category_id: category_id
     })
     form.value.instrument_name = ''
     success_message.value = '新增仪器成功'
     await loadInstruments()
+    // 设置新增项ID用于动画
+    if (newInstrument && newInstrument.id) {
+      newItemId.value = newInstrument.id
+      setTimeout(() => {
+        newItemId.value = null
+      }, 600)
+    }
     setTimeout(() => { success_message.value = '' }, 2000)
   } catch (e) {
     error_message.value = e.message || '新增失败'
@@ -133,20 +150,27 @@ async function deleteInstrument(item) {
   const confirmed = window.confirm(`确定删除仪器"${item.instrument_name}"吗？`)
   if (!confirmed) return
 
-  operating.value = true
-  error_message.value = ''
-  try {
-    await InstrumentAPI.remove(item.id)
-    success_message.value = '删除仪器成功'
-    await loadInstruments()
-    setTimeout(() => { success_message.value = '' }, 2000)
-  } catch (e) {
-    error_message.value = e.message || '删除失败'
-  } finally {
-    setTimeout(() => {
-      operating.value = false
-    }, 1200)
-  }
+  // 先添加删除动画类
+  deletingId.value = item.id
+
+  // 等待动画完成后再执行删除
+  setTimeout(async () => {
+    operating.value = true
+    error_message.value = ''
+    try {
+      await InstrumentAPI.remove(item.id)
+      success_message.value = '删除仪器成功'
+      await loadInstruments()
+      setTimeout(() => { success_message.value = '' }, 2000)
+    } catch (e) {
+      error_message.value = e.message || '删除失败'
+    } finally {
+      deletingId.value = null
+      setTimeout(() => {
+        operating.value = false
+      }, 1200)
+    }
+  }, 350)
 }
 
 function getCategoryName(category_id) {
@@ -192,12 +216,12 @@ onMounted(async () => {
         </div>
       </div>
       <div class="form-actions" v-if="editMode">
-        <button class="secondary-btn" type="button" @click="cancelEdit">取消</button>
-        <button class="primary-btn" type="button" @click="saveInstrument" :disabled="operating">
+        <button class="secondary-btn btn-animate" type="button" @click="cancelEdit">取消</button>
+        <button class="primary-btn btn-animate" type="button" @click="saveInstrument" :disabled="operating">
           {{ operating ? '处理中...' : '保存修改' }}
         </button>
       </div>
-      <button v-else class="primary-btn" type="button" @click="addInstrument" :disabled="operating">
+      <button v-else class="primary-btn btn-animate" type="button" @click="addInstrument" :disabled="operating">
         {{ operating ? '处理中...' : '新增仪器' }}
       </button>
     </div>
@@ -213,24 +237,33 @@ onMounted(async () => {
             <option value="">全部类别</option>
             <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.category_name }}</option>
           </select>
-          <button class="secondary-btn" type="button" @click="loadInstruments">刷新</button>
+          <button class="secondary-btn btn-animate" type="button" @click="loadInstruments">刷新</button>
         </div>
       </div>
 
       <div v-if="loading" class="loading-text">加载中...</div>
       <div v-else-if="filtered_instruments.length === 0" class="empty-text">暂无仪器</div>
       <div v-else class="instrument-list">
-        <div v-for="item in filtered_instruments" :key="item.id" class="instrument-item">
+        <div
+          v-for="item in filtered_instruments"
+          :key="item.id"
+          class="instrument-item"
+          :class="{
+            'list-refresh-item': isRefreshing,
+            'blinds-enter': newItemId === item.id,
+            'wipe-out': deletingId === item.id
+          }"
+        >
           <div class="instrument-info">
             <div class="instrument-name">{{ item.instrument_name }}</div>
             <div class="instrument-category">{{ getCategoryName(item.category_id) }}</div>
             <div v-if="item.description" class="instrument-desc">{{ item.description }}</div>
           </div>
           <div class="instrument-actions">
-            <button class="text-btn" type="button" @click="editInstrument(item)" :disabled="operating">
+            <button class="text-btn btn-animate" type="button" @click="editInstrument(item)" :disabled="operating">
               编辑
             </button>
-            <button class="text-btn danger" type="button" @click="deleteInstrument(item)" :disabled="operating">
+            <button class="text-btn danger btn-animate" type="button" @click="deleteInstrument(item)" :disabled="operating">
               删除
             </button>
           </div>
@@ -454,4 +487,77 @@ onMounted(async () => {
 
 .notice.error { background: var(--danger-soft); color: var(--danger); }
 .notice.success { background: var(--success-soft); color: var(--success); }
+
+/* 按钮点击跳动特效 */
+.btn-animate {
+  transition: transform 0.15s ease;
+}
+.btn-animate:active:not(:disabled) {
+  animation: btn-bounce 0.3s ease;
+}
+@keyframes btn-bounce {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(0.95); }
+}
+
+/* 列表刷新百叶窗特效 */
+.list-refresh-item {
+  animation: blinds-refresh 0.6s ease;
+}
+@keyframes blinds-refresh {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 新增项百叶窗进入特效 */
+.blinds-enter {
+  animation: blinds-enter 0.6s ease;
+}
+@keyframes blinds-enter {
+  0% {
+    opacity: 0;
+    transform: scaleY(0);
+    transform-origin: top;
+  }
+  100% {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+/* 删除项擦除特效 */
+.wipe-out {
+  animation: wipe-out 0.35s ease forwards;
+}
+@keyframes wipe-out {
+  0% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}
+
+/* 模态框动画（如需要可添加 modal-box 元素） */
+.modal-animate {
+  animation: modal-fade-in 0.3s ease;
+}
+@keyframes modal-fade-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
 </style>

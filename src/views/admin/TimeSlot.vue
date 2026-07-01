@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, nextTick } from 'vue'
 import { TimeSlotAPI, UserAPI, CategoryAPI } from '@/api'
 
 const loading = ref(false)
@@ -20,6 +20,11 @@ const newSlot = ref({
 const bookingAdvanceDays = ref(1)
 const bookingOpenTime = ref('09:00')
 
+// 动画相关状态
+const refreshing = ref(false)
+const newItemIndex = ref(-1)
+const removingIndex = ref(-1)
+
 async function loadCategories() {
   try {
     categories.value = await CategoryAPI.list()
@@ -30,13 +35,19 @@ async function loadCategories() {
 
 async function loadGlobalConfig() {
   loading.value = true
+  refreshing.value = true
   try {
     const settings = await UserAPI.getSettings()
     customSlots.value = settings?.custom_slots || []
     bookingAdvanceDays.value = Number(settings?.booking_advance_days || 1)
     bookingOpenTime.value = settings?.booking_open_time || '09:00'
+    // 移除刷新动画类
+    setTimeout(() => {
+      refreshing.value = false
+    }, 500)
   } catch (e) {
     errorMessage.value = e.message || '加载配置失败'
+    refreshing.value = false
   } finally {
     loading.value = false
   }
@@ -45,11 +56,17 @@ async function loadGlobalConfig() {
 async function loadCategoryConfig() {
   if (!selectedCategoryId.value) return
   loading.value = true
+  refreshing.value = true
   try {
     const catSettings = await CategoryAPI.getSettings(selectedCategoryId.value)
     customSlots.value = catSettings?.custom_slots || []
+    // 移除刷新动画类
+    setTimeout(() => {
+      refreshing.value = false
+    }, 500)
   } catch (e) {
     errorMessage.value = e.message || '加载类别配置失败'
+    refreshing.value = false
   } finally {
     loading.value = false
   }
@@ -60,18 +77,37 @@ function addSlotRow() {
     errorMessage.value = '请填写时段起止时间'
     return
   }
-  customSlots.value.push({
+  const newSlotItem = {
     slot_start: newSlot.value.slot_start,
     slot_end: newSlot.value.slot_end
-  })
+  }
+  customSlots.value.push(newSlotItem)
   customSlots.value.sort((a, b) => a.slot_start.localeCompare(b.slot_start))
+
+  // 找到新增项的索引并添加动画
+  const insertedIndex = customSlots.value.findIndex(
+    s => s.slot_start === newSlotItem.slot_start && s.slot_end === newSlotItem.slot_end
+  )
+  newItemIndex.value = insertedIndex
+
+  // 动画完成后重置
+  setTimeout(() => {
+    newItemIndex.value = -1
+  }, 500)
+
   newSlot.value.slot_start = ''
   newSlot.value.slot_end = ''
   errorMessage.value = ''
 }
 
 function removeSlotRow(index) {
-  customSlots.value.splice(index, 1)
+  // 先添加动画类
+  removingIndex.value = index
+  // 等动画完成后再删除
+  setTimeout(() => {
+    customSlots.value.splice(index, 1)
+    removingIndex.value = -1
+  }, 350)
 }
 
 async function saveSlots() {
@@ -127,7 +163,7 @@ onMounted(async () => {
     <div class="config-card">
       <div class="scope-tabs">
         <button
-          class="scope-btn"
+          class="scope-btn btn-animate"
           :class="{ active: scope === 'global' }"
           type="button"
           @click="scope = 'global'"
@@ -135,7 +171,7 @@ onMounted(async () => {
           全局时段配置
         </button>
         <button
-          class="scope-btn"
+          class="scope-btn btn-animate"
           :class="{ active: scope === 'category' }"
           type="button"
           @click="scope = 'category'"
@@ -180,7 +216,17 @@ onMounted(async () => {
     <div class="slots-card">
       <div class="card-header">
         <h3>时段列表（{{ customSlots.length }} 个）</h3>
-        <button class="secondary-btn" type="button" @click="addSlotRow">+ 添加时段</button>
+        <div class="header-actions">
+          <button
+            class="secondary-btn btn-animate"
+            type="button"
+            @click="handleScopeChange"
+            :disabled="loading"
+          >
+            刷新
+          </button>
+          <button class="secondary-btn btn-animate" type="button" @click="addSlotRow">+ 添加时段</button>
+        </div>
       </div>
 
       <div class="add-slot-row">
@@ -191,16 +237,25 @@ onMounted(async () => {
         <div class="time-input">
           <input v-model="newSlot.slot_end" type="time" placeholder="结束时间" />
         </div>
-        <button class="primary-btn small" type="button" @click="addSlotRow">添加</button>
+        <button class="primary-btn small btn-animate" type="button" @click="addSlotRow">添加</button>
       </div>
 
       <div v-if="customSlots.length === 0" class="empty-text">
         暂无时段配置，默认使用 09:00 - 18:00 每小时一段
       </div>
       <div v-else class="slot-list">
-        <div v-for="(slot, index) in customSlots" :key="index" class="slot-item">
+        <div
+          v-for="(slot, index) in customSlots"
+          :key="index"
+          class="slot-item"
+          :class="{
+            'list-refresh-item': refreshing,
+            'blinds-enter': index === newItemIndex,
+            'wipe-out': index === removingIndex
+          }"
+        >
           <span class="slot-time">{{ slot.slot_start }} - {{ slot.slot_end }}</span>
-          <button class="text-btn danger" type="button" @click="removeSlotRow(index)">删除</button>
+          <button class="text-btn danger btn-animate" type="button" @click="removeSlotRow(index)">删除</button>
         </div>
       </div>
 
@@ -209,7 +264,7 @@ onMounted(async () => {
 
       <div class="save-row">
         <button
-          class="primary-btn"
+          class="primary-btn btn-animate"
           type="button"
           @click="saveSlots"
           :disabled="operating || loading"
@@ -323,6 +378,11 @@ onMounted(async () => {
   font-size: 16px;
   font-weight: 600;
   color: var(--text-primary);
+}
+
+.header-actions {
+  display: flex;
+  gap: var(--space-2);
 }
 
 .secondary-btn {
@@ -460,4 +520,69 @@ onMounted(async () => {
 
 .notice.error { background: var(--danger-soft); color: var(--danger); }
 .notice.success { background: var(--success-soft); color: var(--success); }
+
+/* 按钮点击跳动特效 */
+.btn-animate {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn-animate:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+/* 百叶窗特效 - 刷新时 */
+.list-refresh-item {
+  animation: blindsRefresh 0.5s ease-out;
+}
+
+@keyframes blindsRefresh {
+  0% {
+    opacity: 0;
+    transform: scaleY(0);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scaleY(0.5);
+  }
+  100% {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+/* 百叶窗特效 - 新增项 */
+.blinds-enter {
+  animation: blindsEnter 0.5s ease-out;
+}
+
+@keyframes blindsEnter {
+  0% {
+    opacity: 0;
+    transform: scaleY(0) translateY(-10px);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scaleY(0.7) translateY(-5px);
+  }
+  100% {
+    opacity: 1;
+    transform: scaleY(1) translateY(0);
+  }
+}
+
+/* 擦除退出特效 - 删除时 */
+.wipe-out {
+  animation: wipeOut 0.35s ease-out forwards;
+}
+
+@keyframes wipeOut {
+  0% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(100%) scale(0.8);
+  }
+}
 </style>
