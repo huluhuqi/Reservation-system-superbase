@@ -1,6 +1,10 @@
 <template>
   <div class="user-layout">
-    <router-view />
+    <router-view v-slot="{ Component, route }">
+      <transition name="page-transition" mode="out-in">
+        <component :is="Component" :key="route.path" />
+      </transition>
+    </router-view>
     <div class="tabbar">
       <button @click="$router.push('/home/booking')">预约</button>
       <button @click="$router.push('/home/records')">记录</button>

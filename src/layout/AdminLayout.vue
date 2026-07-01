@@ -35,7 +35,11 @@
         <span class="mobile-title">管理后台</span>
       </div>
       <div class="page-content">
-        <router-view />
+        <router-view v-slot="{ Component, route }">
+          <transition name="page-transition" mode="out-in">
+            <component :is="Component" :key="route.path" />
+          </transition>
+        </router-view>
       </div>
     </div>
   </div>

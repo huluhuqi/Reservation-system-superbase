@@ -636,9 +636,10 @@ onMounted(async () => {
       </div>
       <div v-else class="category-list">
         <button
-          v-for="cat in filteredCategories"
+          v-for="(cat, idx) in filteredCategories"
           :key="cat.id"
-          class="category-card"
+          class="category-card blinds-enter-delay"
+          :style="{ '--delay': idx * 0.05 + 's' }"
           :class="{ active: selectedCategoryId === cat.id }"
           type="button"
           @click="handleSelectCategory(cat)"
@@ -661,7 +662,12 @@ onMounted(async () => {
         暂无仪器数据
       </div>
       <div v-else class="availability-list">
-        <div v-for="item in instruments" :key="item.id" class="availability-row">
+        <div
+          v-for="(item, idx) in instruments"
+          :key="item.id"
+          class="availability-row blinds-enter-delay"
+          :style="{ '--delay': idx * 0.05 + 's' }"
+        >
           <div class="avail-main">
             <div class="avail-title">{{ item.instrument_name }}</div>
             <div class="avail-sub">
@@ -688,9 +694,10 @@ onMounted(async () => {
       </div>
       <div v-else class="instrument-list">
         <button
-          v-for="item in instruments"
+          v-for="(item, idx) in instruments"
           :key="item.id"
-          class="instrument-card"
+          class="instrument-card blinds-enter-delay"
+          :style="{ '--delay': idx * 0.05 + 's' }"
           :class="{ active: selectedInstrumentId === item.id }"
           type="button"
           @click="selectedInstrumentId = item.id"
@@ -711,9 +718,10 @@ onMounted(async () => {
       </div>
       <div class="date-grid">
         <button
-          v-for="item in quickDateOptions"
+          v-for="(item, idx) in quickDateOptions"
           :key="item.key"
-          class="date-chip"
+          class="date-chip blinds-enter-delay"
+          :style="{ '--delay': idx * 0.04 + 's' }"
           :class="{ active: selectedDate === item.value, disabled: item.disabled }"
           type="button"
           :disabled="item.disabled"
@@ -749,9 +757,10 @@ onMounted(async () => {
       </div>
       <div v-else class="slot-list">
         <button
-          v-for="slot in slots"
+          v-for="(slot, idx) in slots"
           :key="slot.slot_start"
-          class="slot-row"
+          class="slot-row blinds-enter-delay"
+          :style="{ '--delay': idx * 0.05 + 's' }"
           :class="[slot.status, { selected: isSelected(slot) }]"
           type="button"
           @click="handleSlotClick(slot)"

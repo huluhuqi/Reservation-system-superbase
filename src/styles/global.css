@@ -236,6 +236,13 @@ a {
   animation: blinds-enter 0.4s ease-out forwards;
 }
 
+/* 逐项延迟百叶窗特效（用于列表项依次出现） */
+.blinds-enter-delay {
+  opacity: 0;
+  animation: blinds-enter 0.35s ease-out forwards;
+  animation-delay: var(--delay, 0s);
+}
+
 .blinds-enter-delay-1 {
   animation: blinds-enter 0.4s ease-out 0.05s forwards;
   opacity: 0;
