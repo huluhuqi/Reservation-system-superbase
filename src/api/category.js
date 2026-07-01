@@ -5,9 +5,22 @@ export const CategoryAPI = {
     const { data, error } = await supabase
       .from('category')
       .select('*')
-      .order('sort_order', { ascending: true })
-    if (error) throw error
-    return (data || []).map(item => ({
+    if (error) {
+      if (error.message && error.message.includes('sort_order')) {
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('category')
+          .select('*')
+        if (fallbackError) throw fallbackError
+        return (fallbackData || []).map(item => ({
+          ...item,
+          category_name: item.name,
+          category_icon: item.icon || ''
+        }))
+      }
+      throw error
+    }
+    const sorted = (data || []).sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0))
+    return sorted.map(item => ({
       ...item,
       category_name: item.name,
       category_icon: item.icon || ''
@@ -53,14 +66,13 @@ export const CategoryAPI = {
   },
 
   updateSortOrder: async (items) => {
-    const updates = items.map((item, index) => ({
-      id: item.id,
-      sort_order: index
-    }))
-    const { error } = await supabase
-      .from('category')
-      .upsert(updates, { onConflict: 'id' })
-    if (error) throw error
+    for (let i = 0; i < items.length; i++) {
+      const { error } = await supabase
+        .from('category')
+        .update({ sort_order: i })
+        .eq('id', items[i].id)
+      if (error) throw error
+    }
   },
 
   getSettings: async (id) => {
